@@ -79,4 +79,8 @@ terminal art and `hooks/register.tsx` the hooks. `CONTEXT.md` lists the design d
 
 ## License
 
-MIT
+MIT, for the code in this repository.
+
+Crab Buddy is a fan project. It is not made, endorsed or supported by Anthropic. Claude, Claude
+Code and the Claude crab character are Anthropic's; the crab here is drawn after the one on
+Claude Code's welcome screen.
