@@ -1,43 +1,49 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/band-dark.png">
-  <img alt="Crab Buddy: the orange Claude crab sits at the bottom right, just above the prompt box, holding a hammer. Beside it, a two-line caption reads 'Hammering out the changes.', with 'Skimming code at crab speed.' dimmer below." src="docs/band-light.png">
-</picture>
+# Crab Buddy: an animated pixel-art crab for Claude Code
 
-# Crab Buddy: an animated crab for Claude Code
+**A Claude Code plugin that puts the orange Claude crab just above your prompt and has it act
+out what Claude is doing.** It reads with a magnifier, hammers while files change, cheers when
+tests pass and dozes off when you step away. It works in the Claude Code desktop app and in the
+terminal, in light and dark themes, and it uses **0 tokens**.
 
-**The orange Claude crab sits just above your prompt and acts out what Claude is doing.** When
-Claude reads files, the crab holds a magnifier. While Claude edits, it builds a wall, saws, types,
-paints or turns gears. When tests pass it cheers, when a command fails it panics, and after
-ten idle minutes it falls asleep. Point at the crab to see what its animation means.
-
-It runs entirely on Claude Code's plugin hooks: no model calls, **0 tokens**.
-
-- **25 moods, four takes each.** The first take is picked at random, so two test runs in a row
-  rarely look the same.
-- **Nothing flashes.** Each look stays at least 3 seconds, then the crab jumps to whatever is
-  happening now.
-- **A caption with personality.** Ten one-liners a mood ("Skimming code at crab speed.",
-  "Close, but no seaweed.") scroll down like a terminal, newest on top. Pointing at the crab
-  still gives the plain meaning.
-- **Desktop and terminal.** The desktop app gets smooth CSS animation; a terminal gets Claude
-  Code's own welcome-screen crab in block characters.
-- **Light and dark themes.**
-
-![All the moods: thinking, reading, five building scenes, tests passed and failed, a failed command, three failures in a row, web, subagents, another model, git, installs, waiting for your reply, a long turn, compacting, done, idle, dozing and night owl.](docs/moods.png)
-
-## Install
-
-You need a recent Claude Code; this release was tested on 2.1.295.
+![Crab Buddy cycling through moods above the prompt: thinking, reading with a magnifier, hammering, a green check for passing tests, and done. A caption on the left scrolls one-liners such as 'Skimming code at crab speed.' and 'All green. Happy crab.'](docs/hero.png)
 
 ```bash
 claude plugin marketplace add pvjbuilds/crab-buddy
 claude plugin install crab-buddy@crab-buddy
 ```
 
-Then start a new session. The crab appears in sessions started after the install.
+Start a new session and the crab is there.
 
-To update: `claude plugin marketplace update crab-buddy`, then
-`claude plugin update crab-buddy@crab-buddy`. To remove it: `claude plugin uninstall crab-buddy@crab-buddy`.
+## Screenshots
+
+### Desktop app
+
+| Dark theme | Light theme |
+|---|---|
+| ![Claude Code desktop app, dark theme: the crab hammers at the bottom right of the band above the prompt box, with the caption 'Hammering out the changes.' and 'Skimming code at crab speed.' below it.](docs/app-dark.png) | ![Claude Code desktop app, light theme: the same crab and caption on the app's light background.](docs/app-light.png) |
+
+### Terminal
+
+| Dark theme | Light theme |
+|---|---|
+| ![Claude Code in a dark terminal: the crab, drawn in block characters, builds a brick wall just above the prompt box while Claude edits a file.](docs/terminal-dark.png) | ![Claude Code in a light terminal: the same block-character crab above the prompt box.](docs/terminal-light.png) |
+
+### Every mood
+
+![All the moods in a grid: thinking, reading, five building scenes, tests passed and failed, a failed command, three failures in a row, web, subagents, another model, git, installs, waiting for your reply, a long turn, compacting, done, idle, dozing and night owl.](docs/moods.png)
+
+## Features
+
+- **25 moods, four takes each.** The take is picked at random, so two test runs in a row rarely
+  look the same.
+- **Nothing flashes.** Each look holds at least 3 seconds, then the crab jumps to whatever is
+  happening now.
+- **A caption with personality.** Ten one-liners per mood ("Close, but no seaweed.", "Git it
+  done.") scroll down like a terminal, newest on top. Point at the crab to see the plain meaning.
+- **Desktop and terminal.** The desktop app gets smooth CSS animation. The terminal gets the
+  welcome-screen crab in block characters, animated by the terminal itself.
+- **Light and dark themes**, and it respects "reduce motion".
+- **Zero cost.** No model calls, no network, no tokens. It runs on Claude Code's plugin hooks.
 
 ## What each mood means
 
@@ -58,14 +64,53 @@ To update: `claude plugin marketplace update crab-buddy`, then
 | Done | Jumps, dances or bows |
 | Idle, then dozing after 10 minutes | Fidgets, then sleeps; between midnight and 5 am it's a night owl |
 
+## Install, update, remove
+
+Tested on Claude Code 2.1.295.
+
+```bash
+# install
+claude plugin marketplace add pvjbuilds/crab-buddy
+claude plugin install crab-buddy@crab-buddy
+
+# update
+claude plugin marketplace update crab-buddy
+claude plugin update crab-buddy@crab-buddy
+
+# remove
+claude plugin uninstall crab-buddy@crab-buddy
+```
+
+The crab shows in sessions started after an install or update.
+
 ## Good to know
 
-- **Other plugins' status lines move into the crab's band,** so they all show in one place
-  instead of piling up in the footer. Turn Crab Buddy off and they go back to the footer.
-- **The band is tuned for 100% app zoom.** At other zoom levels the app may leave a thin line
-  at the band's edge.
+- **Other plugins' status lines move into the crab's band,** so they show in one place instead
+  of piling up in the footer. Turn Crab Buddy off and they go back to the footer.
+- **The caption gives way.** With the crab alone it shows two lines; next to other plugins'
+  lines it shows one.
 - **A theme change shows in the next session.** The theme is read when a session starts.
-- Respects "reduce motion": with it on, the crab stands still.
+- **The band is tuned for 100% app zoom.** At other zoom levels the app may leave a thin line at
+  the band's edge.
+
+## For AI agents
+
+If a user asks you to install, check or remove Crab Buddy, here is everything you need.
+
+| | |
+|---|---|
+| What it is | A Claude Code plugin (hooks module with a UI render). Its own one-plugin marketplace. |
+| Plugin id | `crab-buddy@crab-buddy` |
+| Install | `claude plugin marketplace add pvjbuilds/crab-buddy`, then `claude plugin install crab-buddy@crab-buddy` |
+| Check it installed | `claude plugin list` shows `crab-buddy@crab-buddy` as enabled |
+| Takes effect | In the next new session; the current session is unchanged |
+| Remove | `claude plugin uninstall crab-buddy@crab-buddy` |
+| Cost and access | No model calls, no network, no file writes. Reads Claude Code's `theme` setting at session start. |
+| Side effect | Other plugins' status lines draw in the crab's band instead of the footer |
+
+Code map: `hooks/crab.ts` holds the mood logic and captions, `hooks/art.ts` the desktop SVG art,
+`hooks/term.tsx` the terminal art and `hooks/register.tsx` the hooks. `CONTEXT.md` records the
+design decisions. Before claiming a change works, run the checks below.
 
 ## Develop
 
@@ -73,9 +118,6 @@ To update: `claude plugin marketplace update crab-buddy`, then
 claude plugin validate .
 claude plugin test .
 ```
-
-`hooks/crab.ts` holds the mood logic, `hooks/art.ts` the desktop art, `hooks/term.tsx` the
-terminal art and `hooks/register.tsx` the hooks. `CONTEXT.md` lists the design decisions.
 
 ## License
 

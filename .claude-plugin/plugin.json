@@ -1,1 +1,24 @@
-{"name": "crab-buddy", "version": "0.8.0", "description": "The orange Claude crab perches at the bottom right above the prompt and acts out what is happening: reading, building (five scenes), testing, debugging, web, subagents, git, installs, idle fidgets, dozing and night owl. Each look holds at least 3 s, so nothing flashes; a caption of one-liners (ten a mood) scrolls like a terminal beside it. Desktop: four takes per mood in smooth CSS animation; terminal: the welcome-screen crab in block characters. Light and dark themes. 0 tokens.", "author": {"name": "Praj"}, "types": "./types/index.d.ts"}
+{
+  "name": "crab-buddy",
+  "version": "0.8.0",
+  "description": "The orange Claude crab perches at the bottom right above the prompt and acts out what is happening: reading, building (five scenes), testing, debugging, web, subagents, git, installs, idle fidgets, dozing and night owl. Each look holds at least 3 s, so nothing flashes; a caption of one-liners (ten a mood) scrolls like a terminal beside it. Desktop: four takes per mood in smooth CSS animation; terminal: the welcome-screen crab in block characters. Light and dark themes. 0 tokens.",
+  "author": {
+    "name": "Praj",
+    "url": "https://github.com/pvjbuilds"
+  },
+  "types": "./types/index.d.ts",
+  "homepage": "https://github.com/pvjbuilds/crab-buddy",
+  "repository": "https://github.com/pvjbuilds/crab-buddy",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "crab",
+    "mascot",
+    "animation",
+    "pixel-art",
+    "terminal",
+    "desktop-pet",
+    "status-line",
+    "fun"
+  ]
+}
