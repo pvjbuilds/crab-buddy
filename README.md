@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/band-dark.png">
-  <img alt="Crab Buddy: the orange Claude crab sits at the bottom right, just above the prompt box, holding a hammer. Beside it, a two-line caption reads 'Editing files and running commands', with 'Reading and searching files' dimmer below." src="docs/band-light.png">
+  <img alt="Crab Buddy: the orange Claude crab sits at the bottom right, just above the prompt box, holding a hammer. Beside it, a two-line caption reads 'Hammering out the changes.', with 'Skimming code at crab speed.' dimmer below." src="docs/band-light.png">
 </picture>
 
 # Crab Buddy: an animated crab for Claude Code
@@ -16,8 +16,9 @@ It runs entirely on Claude Code's plugin hooks: no model calls, **0 tokens**.
   rarely look the same.
 - **Nothing flashes.** Each look stays at least 3 seconds, then the crab jumps to whatever is
   happening now.
-- **A caption, when the crab is alone.** Two lines scroll down like a terminal, newest on top:
-  what Claude is doing now and what it did just before.
+- **A caption with personality.** Ten one-liners a mood ("Skimming code at crab speed.",
+  "Close, but no seaweed.") scroll down like a terminal, newest on top. Pointing at the crab
+  still gives the plain meaning.
 - **Desktop and terminal.** The desktop app gets smooth CSS animation; a terminal gets Claude
   Code's own welcome-screen crab in block characters.
 - **Light and dark themes.**

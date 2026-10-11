@@ -164,3 +164,17 @@ test('the art is well-formed XML: no stray < inside the style, which the SVG par
     expect(css).not.toContain('<')
   }
 })
+
+import { LINES, BUILDS } from './hooks/crab.ts'
+test('the band caption: ten one-liners a mood, all different, short, said with certainty (Praj, 12 Oct)', () => {
+  for (const m of [...ONE, ...BUILDS]) {
+    const l = LINES[m]
+    expect([m, l.length, new Set(l).size]).toEqual([m, 10, 10])
+    for (const s of l) {
+      expect(s.length <= 46 ? s : `${m}: too long: ${s}`).toBe(s)
+      expect(/\bor\b/i.test(s) ? `${m}: says "or": ${s}` : s).toBe(s)
+    }
+  }
+  // The five building scenes are one job, so they share one set.
+  expect(LINES.saw).toBe(LINES.build)
+})

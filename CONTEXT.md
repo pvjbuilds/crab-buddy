@@ -34,7 +34,8 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 - 2026-10-12: Shipped alone. The maintainer's other mods depend on their own setup.
 - 2026-10-12: Each look holds at least 3 s (no flashing); done and test results last 5 s so
   the hold can never swallow them. A repeat of the same mood keeps its take.
-- 2026-10-12: Alone in the band, a two-line caption log (newest on top) fills the left.
+- 2026-10-12: The caption is a log of one-liners (`LINES`, ten a mood, no "or"), newest on top:
+  two lines when the crab is alone, one beside other lines and cards. The hover keeps `MEANING`.
 - 2026-10-12: Light theme: no dark paint; the theme is read at session start only.
 - 2026-10-12: Night owl uses the host's local hour.
 - 2026-10-11: Every other plugin's status line is drawn in the band, not the footer;
@@ -46,5 +47,5 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
-2026-10-12: v0.7.0. 30 tests pass. Live in the maintainer's desktop app: 0.5.0 motion confirmed;
-0.6.0 takes and 0.7.0 hold/caption/theme not yet seen live. Light theme never seen live.
+2026-10-12: v0.8.0. 31 tests pass. Live in the maintainer's desktop app: 0.5.0 motion confirmed;
+0.6.0 takes and 0.7.0/0.8.0 hold, caption and theme not yet seen live. Light theme never seen live.

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 import type { Crab, Mood } from '../types'
-import { classify, step, shown, take, setLine, START, MEANING } from './crab.ts'
+import { classify, step, shown, take, setLine, START, MEANING, LINES } from './crab.ts'
 import type { CrabEvent } from './crab.ts'
 import { crabArt } from './art.ts'
 import { COLS, ROWS } from './term.tsx'
@@ -31,7 +31,9 @@ async function show($: any, c: Crab, now: number) {
     return
   }
   const t = take(c, now, m)
-  await update($, look, x => ({ mood: m, take: t, at: now, log: [MEANING[m], ...x.log.filter(l => l !== MEANING[m])].slice(0, 2) }))
+  // A one-liner picked by the millisecond the mood came up; the caption scrolls down one line.
+  const line = LINES[m][now % LINES[m].length]
+  await update($, look, x => ({ mood: m, take: t, at: now, log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,8 +125,8 @@ export const register: Register = on => {
     const rest = await next(e)
     if (e.props.hasSurvey) return rest
     const { mood: m, take: t, log: seen } = await read($, look)
-    // The caption log, newest on top; before the first change, the crab's own mood.
-    const log = seen.length ? seen : [MEANING[m]]
+    // The caption log, newest on top; before the first change, the mood's first line.
+    const log = seen.length ? seen : [LINES[m][0]]
     // Footer-owned lines never draw here, even one a 0.2.0 session left in the atom.
     const ls = Object.entries(await read($, lines)).filter(([who]) => !FOOTER.has(who))
     const { Box, Svg, Text, Client } = $.ui.resolve(e) as ReturnType<typeof $.ui.resolve> & { Svg: never; Client: never }
@@ -174,7 +176,8 @@ export const register: Register = on => {
             {row}
             {info && rest}
             {/* Crab alone in the band: its caption fills the left, so the bar is never an empty strip (Praj, 12 Oct). */}
-            {!info && log.map((l, i) => <Text key={l} color={i === 0 ? 'inactive' : 'subtle'} wrap="truncate-end">{l}</Text>)}
+            {/* Two lines when the crab is alone, the newest only beside other lines and cards (Praj, 12 Oct). */}
+            {(info ? log.slice(0, 1) : log).map((l, i) => <Text key={l} color={i === 0 ? 'inactive' : 'subtle'} wrap="truncate-end">{l}</Text>)}
           </Box>
           <Box key="crab-buddy" flexShrink={0}>
             <Svg source={crabArt(m, t)} alt={`Claude crab: ${m}`} width={52} height={41} />

@@ -1,4 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
+import { LINES } from './hooks/crab.ts'
 
 test('the crab perches above the prompt and follows the turn: reading, a failed command, done', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
@@ -127,16 +128,18 @@ test('idle moves on to its next take after 30 s, still idle (Praj, 12 Oct)', asy
   expect(a?.source).not.toBe(b?.source)
 })
 
-test('crab alone in the band: its caption fills the left, dim; any other line or card takes that room (Praj, 12 Oct)', async ($, on) => {
+test('the caption: two one-liners when the crab is alone, one beside other lines and cards (Praj, 12 Oct)', async ($, on) => {
   let card = false
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return (card ? h(Box, {}, h(Text, {}, 'card')) : h(Box, {})) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const mount = () => $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
   const left = async () => kids(await (await mount()).find({ key: 'crab-text' }) as never as El)
   const [cap] = await left()
-  expect([cap?.props?.color, cap?.children]).toEqual(['inactive', ['Idle: waiting for your message']])
+  // Before anything happens: idle's first line.
+  expect([cap?.props?.color, cap?.children]).toEqual(['inactive', ['Waiting for your next idea.']])
   card = true
-  expect(JSON.stringify(await left())).not.toContain('Idle: waiting')
+  const withCard = await left()
+  expect(JSON.stringify(withCard.at(-1))).toContain('Waiting for your next idea.')
 })
 
 test('light theme: no dark paint, the band keeps the app own colour; dark keeps #151515', async ($, on) => {
@@ -179,8 +182,7 @@ test('no flashing: a look holds 3 s, repeats keep their take, and the caption sc
   await clock.advance(3_000)
   const c = await band()
   expect(c.svg?.alt).toBe('Claude crab: build')
-  expect(c.text.map(t => [t.props?.color, t.children])).toEqual([
-    ['inactive', ['Editing files and running commands']],
-    ['subtle', ['Reading and searching files']],
-  ])
+  // A one-liner from each job, newest on top; the plain meaning stays on the hover label.
+  const [top, below] = c.text.map(t => [t.props?.color, (t.children as string[])[0]])
+  expect([top[0], LINES.build.includes(top[1] as string), below[0], LINES.read.includes(below[1] as string)]).toEqual(['inactive', true, 'subtle', true])
 })
