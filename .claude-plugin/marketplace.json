@@ -1,0 +1,14 @@
+{
+  "name": "crab-buddy",
+  "description": "Crab Buddy: an animated Claude crab above the prompt for Claude Code.",
+  "owner": {
+    "name": "pvjbuilds"
+  },
+  "plugins": [
+    {
+      "name": "crab-buddy",
+      "source": "./",
+      "description": "An animated Claude crab above the prompt that acts out what Claude is doing. 0 tokens."
+    }
+  ]
+}
