@@ -184,16 +184,17 @@ export const register: Register = on => {
           {/* The right half is the crab's stage (Praj, 12 Oct). The Svg asks for more than the half and is capped to it.
               Under 60 columns the half is too small to walk in, and the crab stands as before. */}
           <Box key="crab-buddy" flexShrink={0} width={stage ? '50%' : undefined}>
+            {/* On the stage the label is part of the crab's art, over its head wherever it stands; interactive, so
+                the art sees the pointer. On Windows a hover Box got the desktop's own pill, which kept only the text
+                colour (Praj's photos, 12 Oct). */}
             {stage
-              ? <Svg source={stageArt(m, t, from ?? STATION[m])} alt={`Claude crab: ${m}`} width={2000} height={41} />
+              ? <Svg source={stageArt(m, t, from ?? STATION[m], MEANING[m])} alt={`Claude crab: ${m}`} width={2000} height={41} isInteractive />
               : <Svg source={crabArt(m, t)} alt={`Claude crab: ${m}`} width={52} height={41} />}
-            {/* Pointer on the crab: what this animation means, floated left over the lines so nothing moves (Praj, 12 Oct).
-                Top row of the band, which clips anything placed outside it. The crab's own orange and dark ink, the
-                same in every theme: text/inverseText came out unreadable on Windows in both (Praj, 12 Oct). */}
-            <Box position="absolute" top={0} right={8} display="none" hover={{ display: 'flex' }}
-              backgroundColor="#D97757" paddingX={1}>
-              <Text color="#1F1E1D" wrap="truncate-end">{MEANING[m]}</Text>
-            </Box>
+            {/* Narrow band, crab in the corner: the label floats left of it in the band's own colours, top row. */}
+            {!stage && <Box position="absolute" top={0} right={8} display="none" hover={{ display: 'flex' }}
+              backgroundColor={bg} paddingX={1}>
+              <Text color="text" wrap="truncate-end">{MEANING[m]}</Text>
+            </Box>}
           </Box>
         </Box>
       </Box>

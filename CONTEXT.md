@@ -56,6 +56,12 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
   GitHub topic counts; Jev's ranking of them was mostly in its unsure band.
 - 2026-10-11: Every other plugin's status line is drawn in the band, not the footer;
   `handoff-wait` (the maintainer's cache clock) is the one exception kept in the footer.
+- 2026-10-12: Stage hover never stops the crab. The label rides with it, stays 3 s after the
+  pointer leaves, and uses theme ink (dark on light, light on dark) instead of crab orange.
+  A label pinned where the pointer entered was dropped: CSS can't freeze it without drifting.
+  It fades out over .2 s. Text keeps natural glyph widths (11.5 px, `lengthAdjust="spacing"`), because
+  `spacingAndGlyphs` stretched it. Known limit: a new look redraws the whole SVG, which cuts the label
+  instantly, with no fade (recorded 12:35).
 - Calibrated, not derived: the band's bottom margin `1.16` matches a 18.5 px line height
   (dark theme, 100% app zoom). Larger text leaves a thin line below; lower it.
 - An SVG `<style>` is parsed as XML: a `<` even inside a CSS comment drops every later rule.
@@ -63,6 +69,6 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
-2026-10-12: v0.9.1 (no snap-back, readable hover label), 35 tests pass. v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
+2026-10-12: v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out), 37 tests pass; seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab
 walked between stations. Not yet seen on Windows. README images still show 0.8.0's corner crab.

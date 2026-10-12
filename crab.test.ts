@@ -196,3 +196,51 @@ test('stage: every mood has a station on it, every roam stays on it, and the sta
     }
   }
 })
+
+// Praj, 12 Oct: the label pops up over the crab wherever it stands, and stays a moment after the pointer leaves.
+test('stage: the label rides above the crab, shows on hover, and the crab keeps walking', () => {
+  const tipOf = (m: Mood) => {
+    const svg = stageArt(m, 0, STATION[m], 'What it means')
+    const g = svg.match(/<g class="st-tip">([^]*?)<\/g>/)?.[1] ?? ''
+    const r = g.match(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/)
+    return { svg, text: g.includes('What it means'), x: Number(r?.[1]), y: Number(r?.[2]), w: Number(r?.[3]), h: Number(r?.[4]) }
+  }
+  const right = tipOf('idle'), left = tipOf('gear')
+  expect(right.text).toBe(true)
+  // Above the head: the body starts at 10/30 x 41 = 13.67 px. Taller than 0.9.1's 12 px, which read squashed
+  // (Praj, 12 Oct).
+  expect([right.y, right.h > 12 && right.h <= 13.5]).toEqual([0, true])
+  // On the right half the label ends at the crab's right edge, on the left half it starts at its left edge,
+  // so it never runs off the stage.
+  expect([right.x + right.w, left.x]).toEqual([52, 0])
+  // Praj, 12 Oct (second pass): the crab never stops for the pointer; the label rides with it and stays 3 s
+  // after the pointer leaves, then hides.
+  expect(right.svg).not.toContain('paused')
+  // ...and fades out over .2 s, like the rest of the animation.
+  expect(right.svg).toContain('.st-tip{opacity:0;visibility:hidden;transition:opacity .2s 3s,visibility 0s 3.2s}')
+  expect(right.svg).toContain('.st-at:hover .st-tip{opacity:1;visibility:visible;transition:none}')
+  // Glyphs keep their own shape: only the spacing flexes to fit the pill (squashed glyphs read low-res, 12:32).
+  expect(right.svg).toContain('lengthAdjust="spacing"')
+  expect(right.svg).not.toContain('spacingAndGlyphs')
+  expect(right.svg).toContain('font-size="11.5"')
+  // Not crab orange: dark ink on a light pill, light ink on a dark pill in the dark theme.
+  expect(right.svg).not.toContain('#D97757"/><text')
+  expect(right.svg).toMatch(/@media \(prefers-color-scheme:dark\)\{\.st-bg\{fill:#[0-9a-f]{6}\}\.st-ink\{fill:#[0-9a-f]{6}\}\}/)
+  expect(stageArt('idle', 0, 1, 'a & b').includes('a &amp; b')).toBe(true)
+})
+
+// Recording 12:24 (Praj): "A command faile" ran off the stage's right edge. The label picked its side from the
+// mood's resting spot, while the crab was still walking in or wandering on the other half.
+test('stage: the label switches sides with the crab, through the walk and the wander', () => {
+  const tip = 'A command failed'
+  const sides = (svg: string, name: string) =>
+    new Set([...(svg.match(new RegExp(`@keyframes ${name}\\{([^]*?)\\}\\}`))?.[1] ?? '').matchAll(/translateX\((-?[\d.]+)px\)/g)].map(m => Number(m[1])))
+  // Walking from the far right to gear (.1): right-anchored first, left-anchored on arrival.
+  const walk = stageArt('gear', 0, 1, tip)
+  const w = Number(walk.match(/<g class="st-tip">[^]*?width="([\d.]+)"/)?.[1])
+  expect([...sides(walk, 'st-lw')].sort((a, b) => a - b)).toEqual([52 - w, 0])
+  // idle rests at the far right and wanders to .25: the wander crosses the middle both ways.
+  expect(sides(stageArt('idle', 0, 1, tip), 'st-lr').size).toBe(2)
+  // A crab that stays on one half never moves its label.
+  expect(stageArt('ask', 0, 1, tip)).not.toContain('st-lw')
+})

@@ -360,8 +360,13 @@ export function where(mood: Mood, from: number, s: number): number {
   return to + (q1 > q0 ? v0 + (v1 - v0) * ease((p - q0) / (q1 - q0)) : v1)
 }
 
-/** The crab acting out take `t` of `mood` on the stage, walking in from `from` (0 to 1), then wandering. */
-export function stageArt(mood: Mood, t = 0, from = STATION[mood]): string {
+// A letter's width in ems, for sizing the label's pill without measuring (measured in Chromium at 11.5 px, 12:35:
+// 4.9 to 6.9 px a letter by text). ponytail: Helvetica-ish classes; the pill's spacing absorbs the rest.
+const em = (c: string) => /[ijl.,:;'|!I]/.test(c) ? .23 : /[ftr ]/.test(c) ? .3 : /[mwMW]/.test(c) ? .83 : /[A-Z]/.test(c) ? .68 : .54
+
+/** The crab acting out take `t` of `mood` on the stage, walking in from `from` (0 to 1), then wandering; `tip` shows
+ *  over its head while the pointer is on it (the Svg must be drawn interactive for :hover). */
+export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): string {
   const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = ROAM[mood]
   const crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
   const steps = Math.ceil(d / .2)
@@ -372,6 +377,33 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood]): string {
     // The wander waits for the walk in, so the crab never jumps between the two.
     + (roam ? `.st-in{animation:st-r ${roam[0]}s ease-in-out ${+d.toFixed(2)}s infinite}@keyframes st-r{${roam[1].map(([p, v]) => `${p}{transform:${x(v)}}`).join('')}}`
       + `.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out ${+d.toFixed(2)}s infinite}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out ${+(d + .2).toFixed(2)}s infinite}` : '')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}</style>`
-    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in">${crab}</g></g></svg>`
+    // Pointer on the crab: the label shows over its head and rides with it; the crab keeps walking. The label
+    // stays 3 s after the pointer leaves, then fades out in .2 s (Praj, 12 Oct: a pause stopped the crab, a quick
+    // pass lost it).
+    + '.st-tip{opacity:0;visibility:hidden;transition:opacity .2s 3s,visibility 0s 3.2s}.st-at:hover .st-tip{opacity:1;visibility:visible;transition:none}'
+    // Dark ink on a light pill, light ink on a dark pill: crab orange read poorly (Praj, 12 Oct).
+    + '.st-bg{fill:#f0eee6}.st-ink{fill:#1f1e1d}@media (prefers-color-scheme:dark){.st-bg{fill:#3a3936}.st-ink{fill:#f0eee6}}'
+  // The label, in the art's clear top 13.67 px; it ends at the crab's right edge on the right half of the stage
+  // and starts at its left edge on the left half, so it never runs off. 13.5 tall: 12 read squashed (Praj, 12 Oct).
+  // Only the spacing flexes to fit: stretched glyphs read squat and low-res (recording 12:30).
+  const tw = +[...tip].reduce((t, c) => t + em(c) * 11.5, 0).toFixed(1), w = Math.round(tw + 8), side = (f: number) => f >= .5 ? W - w : 0, lx = side(to)
+  // The crab crosses the middle while it walks in or wanders, so the label switches sides with it on the same clocks
+  // (recording 12:24: "A command faile" ran off the right edge). Offsets from the resting side, held between steps.
+  const swap = (name: string, at: (u: number) => number, clock: string) => {
+    const k: string[] = []
+    let was = NaN
+    for (let i = 0; i <= 100; i++) {
+      const v = side(at(i / 100)) - lx
+      if (v !== was || i === 100) k.push(`${i}%{transform:translateX(${v}px)}`), was = v
+    }
+    return k.some(f => !f.includes('(0px)')) ? { css: `.${name}{animation:${name} ${clock}}@keyframes ${name}{${k.join('')}}`, name } : undefined
+  }
+  const lw = tip && go ? swap('st-lw', u => where(mood, from, d * u), `${+d.toFixed(2)}s step-end`) : undefined
+  const lr = tip && roam ? swap('st-lr', u => where(mood, from, d + roam[0] * u), `${roam[0]}s step-end ${+d.toFixed(2)}s infinite`) : undefined
+  const wrap = (g: string) => [lr, lw].reduce((a, l) => l ? `<g class="${l.name}">${a}</g>` : a, g)
+  const label = tip ? wrap(`<g class="st-tip"><rect x="${lx}" y="0" width="${w}" height="13.5" rx="3" class="st-bg"/>`
+    + `<text x="${lx + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${tw}" lengthAdjust="spacing">`
+    + `${tip.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text></g>`) : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${lw?.css ?? ''}${lr?.css ?? ''}</style>`
+    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in"><rect width="${W}" height="41" fill="transparent"/>${crab}${label}</g></g></svg>`
 }

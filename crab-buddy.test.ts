@@ -92,13 +92,16 @@ test('hovering the crab shows what its current animation means (Praj, 12 Oct)', 
   on('tool.call', () => ({ result: {} }) as never)
   on('turn.start', () => ({ turnId: 't1' }) as never)
   on('session.start', () => ({ cwd: '/p' }) as never)
-  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 50 } as never
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
   await $.turn.start({ text: 'go', turnId: 't1' } as never)
   await $.tool.call({ tool: 'Read', file_path: '/x' } as never)
   await clock.advance(3_000)
+  // On the stage the label is in the crab's own art.
+  const wide = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props: { ...(props as object), bodyColumns: 108 } as never })
+  expect(String((await wide.find({ type: 'Svg' }))?.props?.source)).toContain('Reading and searching files')
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
-  // The crab's keyed Box is the hover scope; the label inside it carries no key of its own.
+  // Narrow band: the crab's keyed Box is the hover scope; the label inside it carries no key of its own.
   const tip = kids(await m.find({ key: 'crab-buddy' }) as never as El).find(k => k.props?.position === 'absolute')
   // Hidden until the pointer is on the crab, then floated over the lines without moving them.
   expect([tip?.props?.position, tip?.props?.display, (tip as { hover?: { display?: string } })?.hover?.display]).toEqual(['absolute', 'none', 'flex'])
@@ -145,24 +148,28 @@ test('the caption: two one-liners when the crab is alone, one beside other lines
 // Praj, 12 Oct: on Windows the desktop app was light while Claude Code's own theme setting said dark, so a
 // band painted by that setting stayed dark. The desktop resolves theme keys by the app's own theme (live
 // probe 10:58: userMessageBackground is the transcript, #151515 dark and #fcfcfb light), so no hex is drawn.
-// The hover label is the exception: on Windows its text/inverseText keys came out unreadable in both themes
-// (Praj's photos, 12 Oct 11:15), so it wears the crab's own colours, the same in every theme.
-test('theme: the band paints theme keys, never a hex; the hover label is crab orange with dark text in every theme', async ($, on) => {
+// The hover label: on Windows the desktop draws its own pill under a hover Box and keeps only the text colour
+// (Praj's photos, 12 Oct 11:15 and 11:31), so on the stage the label is drawn inside the crab's own SVG instead
+// (interactive, so CSS :hover works) and rides above its head; a narrow band keeps a Box label in theme keys.
+test('theme: every colour the band paints is a theme key; the stage label lives in the crab art, the narrow label in theme keys', async ($, on) => {
   mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: 'dark', provider: { kind: 'engine' } }] }) as never)
   on('session.start', () => ({ cwd: '/p' }) as never)
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
-  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
-  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
-  const drawn = await m.drawn() as never as El
-  const tip = kids(await m.find({ key: 'crab-buddy' }) as never as El).find(k => k.props?.position === 'absolute')
-  // Every colour prop outside the crab's own SVG art and its hover label is a theme key.
-  const colours: string[] = []
-  const walk = (e: El) => { if (e.props?.position === 'absolute') return; for (const k of ['backgroundColor', 'color']) if (typeof e.props?.[k] === 'string') colours.push(e.props[k] as string); kids(e).forEach(walk) }
-  walk(drawn)
-  expect(colours.filter(c => c.startsWith('#'))).toEqual([])
-  expect([tip?.props?.backgroundColor, kids(tip)[0]?.props?.color]).toEqual(['#D97757', '#1F1E1D'])
+  const at = async (bodyColumns: number) => $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns } as never })
+  for (const cols of [80, 50]) {
+    const colours: string[] = []
+    const walk = (e: El) => { for (const k of ['backgroundColor', 'color']) if (typeof e.props?.[k] === 'string') colours.push(e.props[k] as string); kids(e).forEach(walk) }
+    walk(await (await at(cols)).drawn() as never as El)
+    expect(colours.filter(c => c.startsWith('#'))).toEqual([])
+  }
+  const wide = await at(80)
+  expect(kids(await wide.find({ key: 'crab-buddy' }) as never as El).some(k => k.props?.position === 'absolute')).toBe(false)
+  expect((await wide.find({ type: 'Svg' }))?.props?.isInteractive).toBe(true)
+  expect(String((await wide.find({ type: 'Svg' }))?.props?.source)).toContain('Idle: waiting for your message')
+  const tip = kids(await (await at(50)).find({ key: 'crab-buddy' }) as never as El).find(k => k.props?.position === 'absolute')
+  expect([tip?.props?.backgroundColor, kids(tip)[0]?.props?.color]).toEqual(['userMessageBackground', 'text'])
 })
 
 // Praj, 12 Oct: rapid changes flashed by too fast to read. Each look stays at least 3 s, then the crab jumps
@@ -205,7 +212,7 @@ test('stage: on a wide band the crab moves in the right half; on a narrow one it
     return { box: (await m.find({ key: 'crab-buddy' }))?.props, svg: (await m.find({ type: 'Svg' }))?.props }
   }
   const wide = await at(108)
-  expect([wide.box?.width, wide.svg?.width, wide.svg?.height]).toEqual(['50%', 2000, 41])
+  expect([wide.box?.width, wide.svg?.width, wide.svg?.height, wide.svg?.isInteractive]).toEqual(['50%', 2000, 41, true])
   expect(String(wide.svg?.source)).toMatch(/^<svg[^>]*width="100%"[^>]*>/)
   expect(String(wide.svg?.source).match(/^<svg[^>]*>/)?.[0]).not.toContain('viewBox')
   const narrow = await at(50)
