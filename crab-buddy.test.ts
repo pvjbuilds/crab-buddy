@@ -53,29 +53,29 @@ test('the crab sits whole in the bar, beside the lines, one size up; no inner bo
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
-  // The only colour is the transcript's #151515, so no inner box shows against the bar.
-  expect((await m.find({ key: 'crab-band' }))?.props?.backgroundColor).toBe('#151515')
-  const svg = await m.find({ type: 'Svg' })
-  expect([svg?.props?.width, svg?.props?.height]).toEqual([52, 41])
+  // The only colour is the transcript's own, so no inner box shows against the bar.
+  expect((await m.find({ key: 'crab-band' }))?.props?.backgroundColor).toBe('userMessageBackground')
+  // On the stage the crab itself is still drawn 52×41.
+  expect(String((await m.find({ type: 'Svg' }))?.props?.source)).toContain('width="52" height="41"')
 })
 
 // Live check 22:07, 11 Oct: 0.4.7's floated fill still covered the crab and the lines in the app (the
 // lift boxes did not lift them). Nothing floats now: the fill is the crab's and the lines' own parent,
 // so they paint over it in plain document order.
-test('the bar reads #151515 edge to edge, with the crab and the lines inside the fill, nothing floated', async ($, on) => {
+test('the bar reads the transcript colour edge to edge, with the crab and the lines inside the fill, nothing floated', async ($, on) => {
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
   const band = await m.drawn() as never as El
   expect(band.props?.key).toBe('crab-band')
   // The app zeroes vertical margins down a single-child chain, but stops at a Box with a background.
-  expect(band.props?.backgroundColor).toBe('#151515')
+  expect(band.props?.backgroundColor).toBe('userMessageBackground')
   const [fill] = kids(band)
   // Into the card's padding ((40px - 1lh)/2, 8px), with the same padding back so the content stays put.
   // Overshoot above and sideways is clipped; below, it would scroll the band, so the bottom is exact.
   const p = fill?.props ?? {}
   expect([p.key, p.backgroundColor, p.marginTop, p.paddingTop, p.marginBottom, p.paddingBottom, p.marginLeft, p.paddingLeft, p.marginRight, p.paddingRight])
-    .toEqual(['crab-fill', '#151515', -2, 2, -1.16, 1.16, -2, 2, -2, 2])
+    .toEqual(['crab-fill', 'userMessageBackground', -2, 2, -1.16, 1.16, -2, 2, -2, 2])
   const [text, buddy] = kids(fill)
   // Only the crab's hover label floats; the fill, the lines and the crab stay in flow.
   expect(JSON.stringify([band.props, p, text, kids(buddy)[0]])).not.toContain('"position"')
@@ -142,19 +142,25 @@ test('the caption: two one-liners when the crab is alone, one beside other lines
   expect(JSON.stringify(withCard.at(-1))).toContain('Waiting for your next idea.')
 })
 
-test('light theme: no dark paint, the band keeps the app own colour; dark keeps #151515', async ($, on) => {
+// Praj, 12 Oct: on Windows the desktop app was light while Claude Code's own theme setting said dark, so a
+// band painted by that setting stayed dark. The desktop resolves theme keys by the app's own theme (live
+// probe 10:58: userMessageBackground is the transcript, #151515 dark and #fcfcfb light), so no hex is drawn.
+test('theme: the band and the hover label paint theme keys, never a hex, whatever the theme setting says', async ($, on) => {
   mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
-  let theme = 'light'
-  on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: theme, provider: { kind: 'engine' } }] }) as never)
+  on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: 'dark', provider: { kind: 'engine' } }] }) as never)
   on('session.start', () => ({ cwd: '/p' }) as never)
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
-  const band = async () => JSON.stringify(await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).drawn())
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
-  expect(await band()).not.toContain('#151515')
-  theme = 'dark'
-  await $.session.start({ source: 'startup', cwd: '/p' } as never)
-  expect(await band()).toContain('#151515')
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  const drawn = await m.drawn() as never as El
+  // Every colour prop outside the crab's own SVG art is a theme key.
+  const colours: string[] = []
+  const walk = (e: El) => { for (const k of ['backgroundColor', 'color']) if (typeof e.props?.[k] === 'string') colours.push(e.props[k] as string); kids(e).forEach(walk) }
+  walk(drawn)
+  expect(colours.filter(c => c.startsWith('#'))).toEqual([])
+  const tip = kids(await m.find({ key: 'crab-buddy' }) as never as El).find(k => k.props?.position === 'absolute')
+  expect([tip?.props?.backgroundColor, kids(tip)[0]?.props?.color]).toEqual(['text', 'inverseText'])
 })
 
 // Praj, 12 Oct: rapid changes flashed by too fast to read. Each look stays at least 3 s, then the crab jumps
@@ -185,4 +191,41 @@ test('no flashing: a look holds 3 s, repeats keep their take, and the caption sc
   // A one-liner from each job, newest on top; the plain meaning stays on the hover label.
   const [top, below] = c.text.map(t => [t.props?.color, (t.children as string[])[0]])
   expect([top[0], LINES.build.includes(top[1] as string), below[0], LINES.read.includes(below[1] as string)]).toEqual(['inactive', true, 'subtle', true])
+})
+
+// Praj, 12 Oct: the crab gets the right half of the band to move in; the caption keeps the left half.
+// Live probe 10:58: an SVG whose markup is width="100%" with no viewBox, drawn wider than its Box, is capped
+// to the Box, and a percentage inside it is the drawn width; a numeric markup width squashed the crab.
+test('stage: on a wide band the crab moves in the right half; on a narrow one it stands as before', async ($, on) => {
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const at = async (bodyColumns: number) => {
+    const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns } as never })
+    return { box: (await m.find({ key: 'crab-buddy' }))?.props, svg: (await m.find({ type: 'Svg' }))?.props }
+  }
+  const wide = await at(108)
+  expect([wide.box?.width, wide.svg?.width, wide.svg?.height]).toEqual(['50%', 2000, 41])
+  expect(String(wide.svg?.source)).toMatch(/^<svg[^>]*width="100%"[^>]*>/)
+  expect(String(wide.svg?.source).match(/^<svg[^>]*>/)?.[0]).not.toContain('viewBox')
+  const narrow = await at(50)
+  expect([narrow.box?.width, narrow.svg?.width, narrow.svg?.height]).toEqual([undefined, 52, 41])
+})
+
+test('stage: a new look scuttles in from where the last one stood; a new take of the same look stays put', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('tool.call', () => ({ result: {} }) as never)
+  on('turn.start', () => ({ turnId: 't1' }) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 108 } as never
+  const src = async () => String((await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).find({ type: 'Svg' }))?.props?.source)
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  // Idle stands at the right end, by the prompt, and walks nowhere.
+  expect(await src()).not.toContain('st-go')
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await clock.advance(3_000)
+  // Thinking: from idle's spot at the right end to think's, a little to the left.
+  expect(await src()).toContain('@keyframes st-go{0%{transform:translateX(calc((100% - 52px) * 1))}100%{transform:translateX(calc((100% - 52px) * 0.85))}}')
+  await $.tool.call({ tool: 'Read', file_path: '/a' } as never)
+  await clock.advance(3_000)
+  expect(await src()).toContain('0%{transform:translateX(calc((100% - 52px) * 0.85))}100%{transform:translateX(calc((100% - 52px) * 0.65))}')
 })

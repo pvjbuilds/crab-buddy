@@ -3,20 +3,19 @@ import type { Register } from 'claude-code'
 import type { Crab, Mood } from '../types'
 import { classify, step, shown, take, setLine, START, MEANING, LINES } from './crab.ts'
 import type { CrabEvent } from './crab.ts'
-import { crabArt } from './art.ts'
+import { crabArt, stageArt, STATION } from './art.ts'
 import { COLS, ROWS } from './term.tsx'
 
 const crab = atom({ plugin: 'crab-buddy', key: 'crab' } as const, START)
-// What the crab acts out, which take, since when, and the caption log (newest first).
-type Look = { mood: Mood; take: number; at: number; log: string[] }
-const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle', take: 0, at: 0, log: [] } as Look)
+// What the crab acts out, which take, since when, the caption log (newest first) and the stage station it walks
+// in from (the last mood's).
+type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number }
+const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle', take: 0, at: 0, log: [], from: 1 } as Look)
 // Rapid changes flashed by too fast to read (Praj, 12 Oct): a look stays at least this long, then the crab
 // jumps to whatever is current. The same mood keeps its take until the take's own clock moves it on.
 const DWELL = 3_000
 // Every plugin's status line, by plugin, drawn in the crab's bar instead of the footer's "+1" overflow.
 const lines = atom({ plugin: 'crab-buddy', key: 'lines' } as const, {} as Record<string, string>)
-// A light theme: the band keeps the app's own colour instead of the dark transcript paint. Read at session start.
-const light = atom({ plugin: 'crab-buddy', key: 'light' } as const, false)
 
 // The render reads only `look`, so the crab redraws when its mood or take changes and never in between.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,13 +26,13 @@ async function show($: any, c: Crab, now: number) {
   if (m === was.mood) {
     // A repeat (Read after Read) restarts lastActive, which would re-pick the take on every call.
     const t = take({ ...c, lastActive: was.at }, now, m)
-    if (t !== was.take) await update($, look, x => ({ ...x, take: t, at: now }))
+    if (t !== was.take) await update($, look, x => ({ ...x, take: t, at: now, from: STATION[m] }))
     return
   }
   const t = take(c, now, m)
   // A one-liner picked by the millisecond the mood came up; the caption scrolls down one line.
   const line = LINES[m][now % LINES[m].length]
-  await update($, look, x => ({ mood: m, take: t, at: now, log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
+  await update($, look, x => ({ mood: m, take: t, at: now, from: STATION[x.mood], log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,9 +61,6 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const now = await $.clock.now()
     await update($, crab, c => ({ ...c, lastActive: now }))
-    // ponytail: a theme switch mid-session shows after the next session start; hook config.set if that matters.
-    const theme = (await $.config.list().catch(() => [])).find(r => r.key === 'theme')?.value
-    await update($, light, () => /light/i.test(String(theme ?? '')))
     // Timed moods (done, a test result, doze, night owl, long turn) change with no event; 1 s also ends a dwell on time.
     $.clock.every(1_000, () => retime($))
     return next(e)
@@ -124,7 +120,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const rest = await next(e)
     if (e.props.hasSurvey) return rest
-    const { mood: m, take: t, log: seen } = await read($, look)
+    const { mood: m, take: t, log: seen, from } = await read($, look)
     // The caption log, newest on top; before the first change, the mood's first line.
     const log = seen.length ? seen : [LINES[m][0]]
     // Footer-owned lines never draw here, even one a 0.2.0 session left in the atom.
@@ -153,7 +149,7 @@ export const register: Register = on => {
     }
     // The crab is in flow at the bar's right, beside the lines: floated, the band clipped it or shrank it to
     // its slot (0.4.3). 52×41: one size up, art ratio 38:30 (Praj, 11 Oct).
-    // The bar reads #151515 like the transcript (Praj, 11 Oct). Nothing floats: a floated fill painted over
+    // The bar reads like the transcript (Praj, 11 Oct). Nothing floats: a floated fill painted over
     // the crab and the lines in the app (0.4.5-0.4.7; 0.4.7's lift boxes did not lift them, live check 22:07).
     //  - crab-fill is the crab's and the lines' own parent, so they paint over its fill in document order.
     //  - It reaches into the card's padding ((40px - 1lh)/2 x 8px; margin units .5lh and ch) with the same
@@ -162,11 +158,12 @@ export const register: Register = on => {
     //    1.16 x .5lh = (40px - 1lh)/2 at the measured lh 18.5 (half a line left a 1.5px grey line, 22:24).
     //  - crab-band carries the same colour: the app zeroes vertical margins down a single-child chain from
     //    the root, and stops at a Box with a background.
-    // ponytail: hex, dark theme only; add a light value if Praj switches. 1.16 is calibrated to lh 18.5: a
-    // larger text size leaves a grey line below (lower it), a smaller one lets the bar scroll a pixel or two.
-    // Light themes get no paint: a guessed light hex would show as a strip of its own.
-    const isLight = await read($, light)
-    const bg = isLight ? undefined : '#151515'
+    // ponytail: 1.16 is calibrated to lh 18.5: a larger text size leaves a grey line below (lower it), a smaller
+    // one lets the bar scroll a pixel or two.
+    // The transcript's colour by theme key, which the desktop resolves by the app's own theme: Claude Code's theme
+    // setting can say dark while the app is light (Windows, Praj 12 Oct). Probe 10:58: #151515 dark, #fcfcfb light.
+    const bg = 'userMessageBackground'
+    const stage = e.props.bodyColumns >= 60
     return (
       <Box key="crab-band" flexDirection="row" backgroundColor={bg}>
         {/* The crab stands at the bottom right, right on the prompt box, however many lines sit beside it (Praj, 12 Oct). */}
@@ -179,13 +176,17 @@ export const register: Register = on => {
             {/* Two lines when the crab is alone, the newest only beside other lines and cards (Praj, 12 Oct). */}
             {(info ? log.slice(0, 1) : log).map((l, i) => <Text key={l} color={i === 0 ? 'inactive' : 'subtle'} wrap="truncate-end">{l}</Text>)}
           </Box>
-          <Box key="crab-buddy" flexShrink={0}>
-            <Svg source={crabArt(m, t)} alt={`Claude crab: ${m}`} width={52} height={41} />
+          {/* The right half is the crab's stage (Praj, 12 Oct). The Svg asks for more than the half and is capped to it.
+              Under 60 columns the half is too small to walk in, and the crab stands as before. */}
+          <Box key="crab-buddy" flexShrink={0} width={stage ? '50%' : undefined}>
+            {stage
+              ? <Svg source={stageArt(m, t, from ?? STATION[m])} alt={`Claude crab: ${m}`} width={2000} height={41} />
+              : <Svg source={crabArt(m, t)} alt={`Claude crab: ${m}`} width={52} height={41} />}
             {/* Pointer on the crab: what this animation means, floated left over the lines so nothing moves (Praj, 12 Oct).
                 Top row of the band, which clips anything placed outside it. */}
             <Box position="absolute" top={0} right={8} display="none" hover={{ display: 'flex' }}
-              backgroundColor="#2a2a2a" paddingX={1}>
-              <Text color={isLight ? '#F4F3EE' : 'text'} wrap="truncate-end">{MEANING[m]}</Text>
+              backgroundColor="text" paddingX={1}>
+              <Text color="inverseText" wrap="truncate-end">{MEANING[m]}</Text>
             </Box>
           </Box>
         </Box>

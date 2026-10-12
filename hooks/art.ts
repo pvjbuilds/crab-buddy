@@ -317,3 +317,39 @@ export function crabArt(mood: Mood, t = 0): string {
     + `${g('cb-ey', eyes)}${mouth}${g('cb-ar', r(23, armY, 4, 4, O))}${g('cb-pr', prop)}</g>`
     + `${g('cb-la', r(7, 22, 2, 4, O) + r(17, 22, 2, 4, O))}${g('cb-lb', r(11, 22, 2, 4, O) + r(21, 22, 2, 4, O))}</g>${z}</g></svg>`
 }
+
+// The stage (Praj, 12 Oct): the right half of the band, the crab 52×41 inside it. The markup is width="100%" with no
+// viewBox, so user units are CSS px and a percentage is the drawn width (live probe 10:58; a numeric width squashed
+// the crab). Each mood has a station across it, 0 the stage's left end and 1 its right, beside the prompt; a new look
+// scuttles there sideways from the last one's, and some moods roam about their station.
+export const STATION: Record<Mood, number> = {
+  idle: 1, think: .85, read: .65, build: .9, saw: .7, type: .5, paint: .3, gear: .1, test: .5, testp: .5, testf: .5,
+  debug: .35, dizzy: .35, fixed: .5, done: 1, doze: 1, night: 1, web: .7, sub: .6, codex: .6, git: .4, inst: .55, ask: 1,
+  long: .5, comp: 1,
+}
+// [cycle, keyframe stops as [percent, offset from the station]]; every stop stays inside the stage.
+const ROAM: Partial<Record<Mood, [string, [string, number][]]>> = {
+  idle: ['40s', [['0%,15%', 0], ['30%,45%', -.4], ['60%,72%', -.75], ['90%,100%', 0]]],
+  think: ['12s', [['0%,10%', 0], ['45%,55%', -.3], ['90%,100%', 0]]],
+  read: ['16s', [['0%', 0], ['50%', -.25], ['100%', 0]]],
+  web: ['6s', [['0%', 0], ['50%', -.35], ['100%', 0]]],
+  done: ['5s', [['0%', 0], ['45%,55%', -.8], ['100%', 0]]],
+  long: ['20s', [['0%', 0], ['50%', -.2], ['100%', 0]]],
+  dizzy: ['2.4s', [['0%,100%', 0], ['25%', -.04], ['75%', .04]]],
+}
+const W = 52
+const x = (f: number) => `translateX(calc((100% - ${W}px) * ${+f.toFixed(3)}))`
+
+/** The crab acting out take `t` of `mood` on the stage, walking in from station `from` (0 to 1). */
+export function stageArt(mood: Mood, t = 0, from = STATION[mood]): string {
+  const to = STATION[mood], go = Math.abs(from - to) > .001, roam = ROAM[mood]
+  const crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
+  const css = '.st-at,.st-in{transform-box:view-box}'
+    + `.st-at{transform:${x(to)}}`
+    + (go ? `.st-go{animation:st-go 1.2s ease-in-out}@keyframes st-go{0%{transform:${x(from)}}100%{transform:${x(to)}}}`
+      + '.st-go .cb:not(.cb-walk) .cb-la{animation:cb-st .2s ease-in-out 6}.st-go .cb:not(.cb-walk) .cb-lb{animation:cb-st .2s ease-in-out 6 -.1s}' : '')
+    + (roam ? `.st-in{animation:st-r ${roam[0]} ease-in-out infinite}@keyframes st-r{${roam[1].map(([p, d]) => `${p}{transform:${x(d)}}`).join('')}}`
+      + '.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out infinite}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out infinite -.2s}' : '')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}</style>`
+    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in">${crab}</g></g></svg>`
+}

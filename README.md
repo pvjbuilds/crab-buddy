@@ -40,9 +40,13 @@ Start a new session and the crab is there.
   happening now.
 - **A caption with personality.** Ten one-liners per mood ("Close, but no seaweed.", "Git it
   done.") scroll down like a terminal, newest on top. Point at the crab to see the plain meaning.
+- **A stage, not a corner.** In the desktop app the crab owns the right half of the band. It
+  walks to a spot for each mood, wanders while idle, scuttles home when done and curls up at the
+  right edge to doze. In a narrow window it falls back to the corner.
 - **Desktop and terminal.** The desktop app gets smooth CSS animation. The terminal gets the
   welcome-screen crab in block characters, animated by the terminal itself.
-- **Light and dark themes**, and it respects "reduce motion".
+- **Light and dark themes.** In the desktop app the band follows the app's theme the moment you
+  switch it. It respects "reduce motion".
 - **Zero cost.** No model calls, no network, no tokens. It runs on Claude Code's plugin hooks.
 
 ## What each mood means
@@ -89,7 +93,8 @@ The crab shows in sessions started after an install or update.
   of piling up in the footer. Turn Crab Buddy off and they go back to the footer.
 - **The caption gives way.** With the crab alone it shows two lines; next to other plugins'
   lines it shows one.
-- **A theme change shows in the next session.** The theme is read when a session starts.
+- **In the terminal, a theme change shows in the next session.** The terminal theme is read
+  when a session starts.
 - **The band is tuned for 100% app zoom.** At other zoom levels the app may leave a thin line at
   the band's edge.
 

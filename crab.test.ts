@@ -178,3 +178,21 @@ test('the band caption: ten one-liners a mood, all different, short, said with c
   // The five building scenes are one job, so they share one set.
   expect(LINES.saw).toBe(LINES.build)
 })
+
+import { stageArt, STATION } from './hooks/art.ts'
+import type { Mood } from './types'
+const MOODS = Object.keys(MEANING) as Mood[]
+
+test('stage: every mood has a station on it, every roam stays on it, and the stage art is well-formed XML', () => {
+  for (const m of MOODS) {
+    expect(STATION[m] >= 0 && STATION[m] <= 1 ? m : `${m}: off the stage`).toBe(m)
+    const svg = stageArt(m, 1, 0)
+    const style = svg.match(/<style>([^]*?)<\/style>/)?.[1] ?? ''
+    expect(style.includes('<') ? `${m}: < in the stage style` : m).toBe(m)
+    for (const [, f] of svg.matchAll(/\* (-?[\d.]+)\)\)/g)) {
+      // The walk-in names stations; the roam names offsets from this mood's station.
+      const at = Number(f), ok = (at >= 0 && at <= 1) || (STATION[m] + at >= -.001 && STATION[m] + at <= 1.001)
+      expect(ok ? m : `${m}: ${f} leaves the stage`).toBe(m)
+    }
+  }
+})

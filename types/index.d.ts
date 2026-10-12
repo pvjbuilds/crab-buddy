@@ -6,6 +6,6 @@ export type Crab = { mood: Mood; until: number; fails: number; testFailed: boole
 
 declare module 'claude-code' {
   interface PluginState {
-    'crab-buddy': { crab: Crab; look: { mood: Mood; take: number; at: number; log: string[] }; lines: Record<string, string>; light: boolean }
+    'crab-buddy': { crab: Crab; look: { mood: Mood; take: number; at: number; log: string[]; from?: number }; lines: Record<string, string> }
   }
 }
