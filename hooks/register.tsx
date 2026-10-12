@@ -94,11 +94,11 @@ export const register: Register = on => {
     return r
   })
 
-  // The engine settled on asking you: the crab holds up a question mark until the call goes on.
-  on('tool.check', async ($, e, next) => {
-    const r = await next(e)
-    if (r.decision === 'ask' && !isSub(e)) await apply($, { kind: 'ask' })
-    return r
+  // A permission dialog opened: the crab holds up a question mark until the call goes on. Not `tool.check`'s ask,
+  // which the mode settles after it: auto mode's classifier approved most unseen, and the "?" showed for nobody (12 Oct).
+  on('classic.PermissionRequest', async ($, e, next) => {
+    if (typeof (e as { agent_id?: unknown }).agent_id !== 'string') await apply($, { kind: 'ask' })
+    return next(e)
   })
 
   // A precompute runs unseen in the background, and a subagent's compaction is its own: neither squishes the crab.

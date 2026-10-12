@@ -70,6 +70,9 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
   the dizzy wobble keep their pace. A take change walks idle home, so it reaches only its first wander stop.
   Look hold (Praj, 13:05, "switches every 2-4 s"): a routine look (think, read, edit, web) holds 8 s, was 3. A held
   look (debug, dizzy, test results, done), a question or a squish cuts straight in, so none vanishes inside the dwell.
+- 2026-10-12 (after 0.9.3): The ask look follows `classic.PermissionRequest` (a dialog really opened), not `tool.check`'s
+  ask, which the mode settles after it: in auto mode the classifier approved most calls unseen and the crab held up
+  its "?" sign (the "blue ? box") for nobody. AskUserQuestion still asks through `classify`.
 - Calibrated, not derived: the band's bottom margin `1.16` matches a 18.5 px line height
   (dark theme, 100% app zoom). Larger text leaves a thin line below; lower it.
 - An SVG `<style>` is parsed as XML: a `<` even inside a CSS comment drops every later rule.
@@ -77,6 +80,6 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
-2026-10-12: v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks), 42 tests pass; extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
+2026-10-12: v0.9.4 (the "?" follows real permission dialogs only), 43 tests pass. v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks); extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab
 walked between stations. Not yet seen on Windows. README images still show 0.8.0's corner crab.

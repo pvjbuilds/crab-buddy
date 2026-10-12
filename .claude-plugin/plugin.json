@@ -1,6 +1,6 @@
 {
   "name": "crab-buddy",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "The orange Claude crab gets the right half of the band above the prompt as a stage and acts out what is happening: reading, building (five scenes), testing, debugging, web, subagents, git, installs, idle fidgets, dozing and night owl. Each look holds at least 3 s, so nothing flashes; a caption of one-liners (ten a mood) scrolls like a terminal beside it. Desktop: it walks to a spot per mood, wanders when idle, four takes per mood in smooth CSS animation; terminal: the welcome-screen crab in block characters. Follows the app's light or dark theme live. 0 tokens.",
   "author": {
     "name": "Praj",

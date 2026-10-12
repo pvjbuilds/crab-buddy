@@ -226,6 +226,25 @@ test('a routine look holds 8 s, but a test result cuts straight in', async ($, o
   expect(await alt()).toBe('Claude crab: testf')
 })
 
+// 12 Oct 13:15: an engine "ask" is settled by the mode first; in auto mode the classifier approves it unseen, and
+// the crab held up its "?" sign for nobody. It asks only when a permission dialog really opens.
+test('the crab holds up its question only when you are really asked', async ($, on) => {
+  mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('turn.start', () => ({ turnId: 't1' }) as never)
+  on('tool.check', () => ({ decision: 'ask' }) as never)
+  on('classic.PermissionRequest', () => ({}) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const alt = async () => (await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).find({ type: 'Svg' }))?.props?.alt
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' } } as never)
+  expect(await alt()).toBe('Claude crab: think')
+  await $.classic.PermissionRequest({ tool_name: 'Bash', tool_input: { command: 'ls' } } as never)
+  expect(await alt()).toBe('Claude crab: ask')
+})
+
 // Praj, 12 Oct: the crab gets the right half of the band to move in; the caption keeps the left half.
 // Live probe 10:58: an SVG whose markup is width="100%" with no viewBox, drawn wider than its Box, is capped
 // to the Box, and a percentage inside it is the drawn width; a numeric markup width squashed the crab.
