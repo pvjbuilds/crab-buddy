@@ -62,18 +62,19 @@ test('tests: running, then failed, then fixed when the next run passes, then pla
 
 test('a turn past 5 minutes shows the long-turn sweat, but a failure still wins', () => {
   const c = run([0, { kind: 'turnStart' }], [S, { kind: 'tool', mood: 'build' }])
-  expect(shown(c, T0 + 4 * M + 10 * S)).toBe('build')
+  // 14 s scenes from the turn's start: 250 s in is scene 17, the laptop (17 % 5 = 2); 309 s in is scene 22, too.
+  expect(shown(c, T0 + 4 * M + 10 * S)).toBe('type')
   // Past 5 minutes it takes turns: 8 s of sweat, 8 s of the work itself, so a long session keeps its flavour.
   expect(shown(c, T0 + 5 * M + S)).toBe('long')
-  expect(shown(c, T0 + 5 * M + 9 * S)).toBe('build')
+  expect(shown(c, T0 + 5 * M + 9 * S)).toBe('type')
   expect(shown(c, T0 + 5 * M + 17 * S)).toBe('long')
   const f = step(c, { kind: 'toolEnd', mood: 'build', isError: true }, T0 + 6 * M)
   expect(shown(f, T0 + 6 * M + S)).toBe('debug')
 })
 
-test('a long build cycles five scenes, 10 s each: hammer, saw, laptop, paint, gears (Praj, 12 Oct)', () => {
+test('a long build cycles five scenes, 14 s each: hammer, saw, laptop, paint, gears (Praj, 12 Oct: 40% longer than 10 s)', () => {
   const c = run([0, { kind: 'turnStart' }], [S, { kind: 'tool', mood: 'build' }])
-  expect([0, 1, 2, 3, 4, 5].map(k => shown(c, T0 + S + k * 10 * S))).toEqual(['build', 'saw', 'type', 'paint', 'gear', 'build'])
+  expect([0, 1, 2, 3, 4, 5].map(k => shown(c, T0 + S + k * 14 * S))).toEqual(['build', 'saw', 'type', 'paint', 'gear', 'build'])
 })
 
 test('idle: dozes after 10 minutes; between 00:00 and 05:00 local time it is the night owl', () => {
@@ -129,14 +130,14 @@ import { take, TAKES } from './hooks/crab.ts'
 // Every mood that had one take; the build moods are already five scenes of their own.
 const ONE = ['idle', 'think', 'read', 'test', 'testp', 'testf', 'debug', 'done', 'doze', 'web', 'sub', 'codex', 'git', 'inst', 'ask', 'long', 'comp', 'dizzy', 'fixed', 'night'] as const
 
-test('four takes a mood: the first picked by the moment it began, the next every 10 s, idle ones every 30 s (Praj, 12 Oct)', () => {
+test('four takes a mood: the first picked by the moment it began, the next every 14 s, idle ones every 42 s (Praj, 12 Oct: 40% longer)', () => {
   expect(TAKES).toBe(4)
   const at = (ms: number) => ({ ...START, lastActive: T0 + ms })
   // Two test runs a moment apart do not open on the same take.
   expect(new Set([0, 1, 2, 3].map(ms => take(at(ms), T0 + ms, 'test'))).size).toBe(4)
-  expect([0, 9, 10, 20, 30, 40].map(s => take(at(0), T0 + s * S, 'think'))).toEqual([0, 0, 1, 2, 3, 0])
-  // Idle, doze and night owl hold a take 30 s: idle's own fidget loop is 30 s long.
-  expect([0, 29, 30, 60].map(s => take(at(0), T0 + s * S, 'idle'))).toEqual([0, 0, 1, 2])
+  expect([0, 13, 14, 28, 42, 56].map(s => take(at(0), T0 + s * S, 'think'))).toEqual([0, 0, 1, 2, 3, 0])
+  // Idle, doze and night owl hold a take three times as long.
+  expect([0, 41, 42, 84].map(s => take(at(0), T0 + s * S, 'idle'))).toEqual([0, 0, 1, 2])
   expect(take(at(1), T0 + 50 * S, 'saw')).toBe(0)
 })
 
@@ -243,4 +244,53 @@ test('stage: the label switches sides with the crab, through the walk and the wa
   expect(sides(stageArt('idle', 0, 1, tip), 'st-lr').size).toBe(2)
   // A crab that stays on one half never moves its label.
   expect(stageArt('ask', 0, 1, tip)).not.toContain('st-lw')
+})
+
+import { where } from './hooks/art.ts'
+// This runner has no toBeCloseTo; the same check as toBeCloseTo(v, 3).
+const near = (a: number, b: number) => expect(Math.abs(a - b) < .0005 ? b : `${a} is not ${b}`).toBe(b)
+// Praj, 12 Oct: on a failed test the crab trips once, slides back and gets up; it does not loop.
+test('stage: testf trips once and holds its last stop', () => {
+  expect(where('testf', .5, 0)).toBe(.5)
+  near(where('testf', .5, 10), .32)
+  near(where('testf', .5, 30), .32)
+  const svg = stageArt('testf', 0, .5)
+  expect(svg).toContain('@keyframes st-trip')
+  expect(svg).toContain('1 forwards')
+  const idle = stageArt('idle', 0, 1)
+  expect(idle).toContain('infinite')
+  expect(idle).not.toContain('st-trip')
+})
+
+// Praj, 12 Oct: a fix throws confetti across the whole stage.
+test('stage: fixed throws confetti across the stage', () => {
+  const xs = [...stageArt('fixed', 0, .5).matchAll(/<rect x="(-?[\d.]+)%"[^>]*class="st-cf"/g)].map(m => Number(m[1]))
+  expect(xs.length).toBe(18)
+  expect(new Set(xs).size).toBe(18)
+  expect(xs.every(v => v > 0 && v < 100)).toBe(true)
+  expect(stageArt('done', 0, 1)).not.toContain('st-cf')
+})
+
+// Praj, 12 Oct: the walk-in leaves a trail of footprints that fade, laid down as the crab passes.
+test('stage: the walk-in leaves footprints in step with the crab', () => {
+  const ts = [...stageArt('gear', 0, 1).matchAll(/<g class="st-fp" style="[^"]*animation-delay:([\d.]+)s"/g)].map(m => Number(m[1]))
+  expect(ts.length).toBe(13)
+  expect(ts.every((t, i) => i === 0 || t > ts[i - 1])).toBe(true)
+  // Half speed (Praj, 12 Oct): the whole stage takes 4.8 s, so gear's walk from 1 takes 4.32 s.
+  expect([ts[0] > 0, ts[12] < 4.32, ts[12] > 2.16]).toEqual([true, true, true])
+  expect(stageArt('ask', 0, 1)).not.toContain('st-fp')
+})
+
+// Praj, 12 Oct: props that use the whole stage, not just the crab's spot.
+test('stage: build lays a wall, paint leaves a stripe, sub sends minis, web surfs a wave', () => {
+  const build = stageArt('build')
+  const bk = [...build.matchAll(/class="st-bk" style="animation-delay:([\d.]+)s"/g)].map(m => Number(m[1]))
+  expect([bk.length, bk[18] < 10]).toEqual([19, true])
+  near(where('paint', .3, 20), .7)
+  expect(stageArt('paint', 0, .3).match(/class="st-sp"/g)?.length).toBe(40)
+  expect(stageArt('sub', 0, .6).match(/class="st-mc"/g)?.length).toBe(2)
+  const web = stageArt('web', 0, .7)
+  expect([web.includes('id="st-wave"'), web.includes('st-bob')]).toEqual([true, true])
+  for (const m of MOODS) expect(stageArt(m, 0, 0)).toContain('@media (prefers-reduced-motion:reduce){.st-fx{display:none}.st-tr{animation:none}}')
+  for (const m of ['idle', 'ask'] as Mood[]) expect(stageArt(m, 0, 1)).not.toMatch(/st-bk|st-sp|st-mc|st-wave|st-cf/)
 })

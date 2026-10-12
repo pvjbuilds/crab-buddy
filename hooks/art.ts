@@ -176,7 +176,8 @@ const CSS = `<style>
 @media (prefers-reduced-motion:reduce){.cb *{animation:none!important}}
 </style>`
 
-const MINI = g('cb-mini', `<g style="transform-box:view-box" transform="translate(-7,17) scale(.4)">${r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O) + r(23, 14, 4, 4, O) + r(9, 12, 2, 2, I) + r(19, 12, 2, 2, I) + r(7, 22, 2, 4, O) + r(11, 22, 2, 4, O) + r(17, 22, 2, 4, O) + r(21, 22, 2, 4, O)}</g>`)
+const MINI_BODY = r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O) + r(23, 14, 4, 4, O) + r(9, 12, 2, 2, I) + r(19, 12, 2, 2, I) + r(7, 22, 2, 4, O) + r(11, 22, 2, 4, O) + r(17, 22, 2, 4, O) + r(21, 22, 2, 4, O)
+const MINI = g('cb-mini', `<g style="transform-box:view-box" transform="translate(-7,17) scale(.4)">${MINI_BODY}</g>`)
 const TICK = r(12, 3, 2, 2, '#1D9E75') + r(14, 5, 2, 2, '#1D9E75') + r(16, 3, 2, 2, '#1D9E75') + r(18, 1, 2, 2, '#1D9E75')
 
 // Build: measure the wall with a ruler, then three hammer strikes, one new brick after each (Praj, 11 Oct).
@@ -327,20 +328,26 @@ export const STATION: Record<Mood, number> = {
   debug: .35, dizzy: .35, fixed: .5, done: 1, doze: 1, night: 1, web: .7, sub: .6, codex: .6, git: .4, inst: .55, ask: 1,
   long: .5, comp: 1,
 }
-// [cycle in s, keyframe stops as [percent, offset from the station]]; every stop stays inside the stage.
-const ROAM: Partial<Record<Mood, [number, [string, number][]]>> = {
-  idle: [40, [['0%,15%', 0], ['30%,45%', -.4], ['60%,72%', -.75], ['90%,100%', 0]]],
-  think: [12, [['0%,10%', 0], ['45%,55%', -.3], ['90%,100%', 0]]],
-  read: [16, [['0%', 0], ['50%', -.25], ['100%', 0]]],
-  web: [6, [['0%', 0], ['50%', -.35], ['100%', 0]]],
-  done: [5, [['0%', 0], ['45%,55%', -.8], ['100%', 0]]],
-  long: [20, [['0%', 0], ['50%', -.2], ['100%', 0]]],
+// [cycle in s, keyframe stops as [percent, offset from the station], 1 to play once and hold the last stop];
+// every stop stays inside the stage.
+const ROAM: Partial<Record<Mood, [number, [string, number][], 1?]>> = {
+  idle: [80, [['0%,15%', 0], ['30%,45%', -.4], ['60%,72%', -.75], ['90%,100%', 0]]],
+  think: [24, [['0%,10%', 0], ['45%,55%', -.3], ['90%,100%', 0]]],
+  read: [32, [['0%', 0], ['50%', -.25], ['100%', 0]]],
+  web: [12, [['0%', 0], ['50%', -.35], ['100%', 0]]],
+  done: [10, [['0%', 0], ['45%,55%', -.8], ['100%', 0]]],
+  long: [40, [['0%', 0], ['50%', -.2], ['100%', 0]]],
   dizzy: [2.4, [['0%,100%', 0], ['25%', -.04], ['75%', .04]]],
+  // Walks right while it paints, leaving the stripe behind (Praj, 12 Oct).
+  paint: [16, [['0%', 0], ['100%', .4]], 1],
+  // Trips, slides back, gets up (Praj, 12 Oct).
+  testf: [2.4, [['0%,30%', 0], ['75%,100%', -.18]], 1],
 }
 const W = 52
 const x = (f: number) => `translateX(calc((100% - ${W}px) * ${+f.toFixed(3)}))`
-// Seconds to walk from `from` to `to`: the whole stage in 2.4 s, never under .4 s; 0 when already there.
-const walkFor = (from: number, to: number) => Math.abs(from - to) > .001 ? Math.max(.4, 2.4 * Math.abs(from - to)) : 0
+// Seconds to walk from `from` to `to`: the whole stage in 4.8 s, never under .8 s; 0 when already there. Half
+// 0.9.2's speed, and every roam cycle doubled with it (Praj, 12 Oct: the scuttling felt restless).
+const walkFor = (from: number, to: number) => Math.abs(from - to) > .001 ? Math.max(.8, 4.8 * Math.abs(from - to)) : 0
 // CSS ease-in-out (cubic-bezier(.42,0,.58,1)): how far along at progress u, solved by bisection.
 function ease(u: number) {
   let a = 0, b = 1
@@ -348,12 +355,22 @@ function ease(u: number) {
   const m = (a + b) / 2
   return 3 * m * m * (1 - m) + m ** 3
 }
+// The u in 0..1 where ease(u) = p, by bisection: when the crab reaches a fraction p of its walk.
+function uAt(p: number) {
+  let a = 0, b = 1
+  for (let i = 0; i < 30; i++) { const m = (a + b) / 2; if (ease(m) < p) a = m; else b = m }
+  return (a + b) / 2
+}
+// n marks evenly spaced from f0 to f1, each timed to when a walk from f0 (starting at `start`, `dur` s long) passes it.
+const trail = (n: number, f0: number, f1: number, start: number, dur: number) =>
+  Array.from({ length: n }, (_, k) => ({ f: f0 + (f1 - f0) * (k + .5) / n, t: start + dur * uAt((k + .5) / n) }))
 
 /** Where the crab stands (0 to 1) `s` seconds into a look of `mood` that walked in from `from`: the walk, then the wander. */
 export function where(mood: Mood, from: number, s: number): number {
   const to = STATION[mood], d = walkFor(from, to), roam = ROAM[mood]
   if (s < d) return from + (to - from) * ease(s / d)
   if (!roam) return to
+  if (roam[2] && s - d >= roam[0]) return to + roam[1][roam[1].length - 1][1]
   const p = (s - d) % roam[0] / roam[0] * 100
   const stops = roam[1].flatMap(([ps, v]) => ps.split(',').map(q => [parseFloat(q), v] as const)).sort((a, b) => a[0] - b[0])
   const i = stops.findIndex(([q]) => q >= p), [q1, v1] = stops[Math.max(i, 0)], [q0, v0] = stops[Math.max(i - 1, 0)]
@@ -369,20 +386,64 @@ const em = (c: string) => /[ijl.,:;'|!I]/.test(c) ? .23 : /[ftr ]/.test(c) ? .3 
 export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): string {
   const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = ROAM[mood]
   const crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
-  const steps = Math.ceil(d / .2)
+  const steps = Math.ceil(d / .2), once = !!roam?.[2], legs = once ? Math.round(roam![0] / .4) : 'infinite'
   const css = '.st-at,.st-in{transform-box:view-box}'
     + `.st-at{transform:${x(to)}}`
     + (go ? `.st-go{animation:st-go ${+d.toFixed(2)}s ease-in-out}@keyframes st-go{0%{transform:${x(from)}}100%{transform:${x(to)}}}`
       + `.st-go .cb:not(.cb-walk) .cb-la{animation:cb-st .2s ease-in-out ${steps}}.st-go .cb:not(.cb-walk) .cb-lb{animation:cb-st .2s ease-in-out ${steps} -.1s}` : '')
     // The wander waits for the walk in, so the crab never jumps between the two.
-    + (roam ? `.st-in{animation:st-r ${roam[0]}s ease-in-out ${+d.toFixed(2)}s infinite}@keyframes st-r{${roam[1].map(([p, v]) => `${p}{transform:${x(v)}}`).join('')}}`
-      + `.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out ${+d.toFixed(2)}s infinite}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out ${+(d + .2).toFixed(2)}s infinite}` : '')
+    + (roam ? `.st-in{animation:st-r ${roam[0]}s ease-in-out ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}}@keyframes st-r{${roam[1].map(([p, v]) => `${p}{transform:${x(v)}}`).join('')}}`
+      + `.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out ${+d.toFixed(2)}s ${legs}}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out ${+(d + .2).toFixed(2)}s ${legs}}` : '')
+    // The crab faces right, so it pitches forward over its front foot at (40, 38).
+    + (mood === 'testf' ? `.st-tr{transform-box:view-box;transform-origin:0 0;animation:st-trip 2.4s ease-in-out ${+d.toFixed(2)}s 1 both}`
+      + '@keyframes st-trip{0%,15%{transform:none}30%,75%{transform:translate(40px,38px) rotate(24deg) translate(-40px,-38px)}100%{transform:none}}' : '')
     // Pointer on the crab: the label shows over its head and rides with it; the crab keeps walking. The label
     // stays 3 s after the pointer leaves, then fades out in .2 s (Praj, 12 Oct: a pause stopped the crab, a quick
     // pass lost it).
     + '.st-tip{opacity:0;visibility:hidden;transition:opacity .2s 3s,visibility 0s 3.2s}.st-at:hover .st-tip{opacity:1;visibility:visible;transition:none}'
     // Dark ink on a light pill, light ink on a dark pill: crab orange read poorly (Praj, 12 Oct).
     + '.st-bg{fill:#f0eee6}.st-ink{fill:#1f1e1d}@media (prefers-color-scheme:dark){.st-bg{fill:#3a3936}.st-ink{fill:#f0eee6}}'
+  // Stage-wide extras, drawn behind the crab (Praj, 12 Oct).
+  let fx = '', fxCss = ''
+  if (mood === 'fixed') {
+    // A fix throws confetti across the whole stage, three falls.
+    for (let i = 0; i < 18; i++) fx += `<rect x="${((i + .5) / 18 * 100 + ((i * 7) % 5 - 2)).toFixed(1)}%" y="-4" width="${i % 2 ? 3 : 2}" height="${i % 2 ? 2 : 3}" fill="${[Y, PINK, BLU, GRN, ORG][i % 5]}" class="st-cf" style="animation-delay:${(i * .29 % 1.6).toFixed(2)}s"/>`
+    fxCss += '.st-cf{transform-box:fill-box;transform-origin:50% 50%;animation:st-cf 1.6s linear 3 both}@keyframes st-cf{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(46px) rotate(360deg)}}'
+  }
+  if (go) {
+    // Footprints along the walk-in, each laid as the crab passes, then fading (Praj, 12 Oct).
+    trail(Math.max(2, Math.round(Math.abs(to - from) * 14)), from, to, 0, d).forEach(({ f, t }, k) => {
+      const [a, b] = k % 2 ? [22, 36] : [17, 31]
+      fx += `<g class="st-fp" style="transform:${x(f)};animation-delay:${t.toFixed(2)}s">${[a, b].map(v => `<rect x="${v}" y="39" width="3" height="1.5" fill="${G}"/>`).join('')}</g>`
+    })
+    fxCss += '.st-fp{transform-box:view-box;opacity:0;animation:st-fp 2.2s ease-in both}@keyframes st-fp{0%{opacity:0}5%{opacity:.6}100%{opacity:0}}'
+  }
+  if (mood === 'paint') {
+    // The stripe behind it, each mark laid as the crab passes.
+    trail(40, to, to + .4, d, roam![0]).forEach(({ f, t }) => fx += `<g class="st-sp" style="transform:${x(f)};animation-delay:${t.toFixed(2)}s">${r(4, 37, 14, 2.5, BLU)}</g>`)
+    fxCss += '.st-sp{transform-box:view-box;animation:st-sp .3s ease-out both}@keyframes st-sp{0%{opacity:0}100%{opacity:1}}'
+  }
+  if (mood === 'sub') {
+    // Two mini crabs trot the whole stage, half a lap apart.
+    for (const delay of [0, -7]) fx += `<g class="st-mc" style="animation-delay:${delay}s"><g class="st-mb"><g transform="translate(0,28) scale(.4)">${MINI_BODY}</g></g></g>`
+    fxCss += '.st-mc{transform-box:view-box;animation:st-mc 14s linear infinite}@keyframes st-mc{0%{transform:translateX(-14px)}100%{transform:translateX(100%)}}'
+      + '.st-mb{animation:st-mb .3s ease-in-out infinite}@keyframes st-mb{50%{transform:translateY(-1px)}}'
+  }
+  if (mood === 'web') {
+    // A wave scrolls under the crab and it surfs; the second rect fills the gap the first's -16 offset leaves at the right.
+    fx += `<defs><pattern id="st-wave" width="16" height="6" patternUnits="userSpaceOnUse">${r(0, 3, 16, 3, BLU) + r(3, 1, 6, 2, SKY) + r(4, 0, 3, 1, WH)}</pattern></defs>`
+      + '<g class="st-wv"><rect x="-16" y="35" width="100%" height="6" fill="url(#st-wave)"/><rect x="50%" y="35" width="50%" height="6" fill="url(#st-wave)"/></g>'
+    fxCss += '.st-wv{animation:st-wv 1.2s linear infinite}@keyframes st-wv{100%{transform:translateX(16px)}}'
+      + '.st-tr{animation:st-bob 1.2s ease-in-out infinite}@keyframes st-bob{50%{transform:translateY(-2px)}}'
+  }
+  // Build lays a wall leftward, course by course, riding with the crab.
+  let wall = ''
+  if (mood === 'build') {
+    const bricks = [...Array.from({ length: 10 }, (_, k) => [-2 - (k + 1) * 9, 34.5]), ...Array.from({ length: 9 }, (_, k) => [-6.5 - (k + 1) * 9, 30])]
+    wall = g('st-fx', bricks.map(([bx, by], j) => `<rect x="${bx}" y="${by}" width="8" height="4" fill="${j % 2 ? BR2 : BR}" class="st-bk" style="animation-delay:${(d + .3 + j * .45).toFixed(2)}s"/>`).join(''))
+    fxCss += '.st-bk{animation:st-bk .25s ease-out both}@keyframes st-bk{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:none}}'
+  }
+  fxCss += '@media (prefers-reduced-motion:reduce){.st-fx{display:none}.st-tr{animation:none}}'
   // The label, in the art's clear top 13.67 px; it ends at the crab's right edge on the right half of the stage
   // and starts at its left edge on the left half, so it never runs off. 13.5 tall: 12 read squashed (Praj, 12 Oct).
   // Only the spacing flexes to fit: stretched glyphs read squat and low-res (recording 12:30).
@@ -399,11 +460,11 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
     return k.some(f => !f.includes('(0px)')) ? { css: `.${name}{animation:${name} ${clock}}@keyframes ${name}{${k.join('')}}`, name } : undefined
   }
   const lw = tip && go ? swap('st-lw', u => where(mood, from, d * u), `${+d.toFixed(2)}s step-end`) : undefined
-  const lr = tip && roam ? swap('st-lr', u => where(mood, from, d + roam[0] * u), `${roam[0]}s step-end ${+d.toFixed(2)}s infinite`) : undefined
+  const lr = tip && roam ? swap('st-lr', u => where(mood, from, d + roam[0] * u), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`) : undefined
   const wrap = (g: string) => [lr, lw].reduce((a, l) => l ? `<g class="${l.name}">${a}</g>` : a, g)
   const label = tip ? wrap(`<g class="st-tip"><rect x="${lx}" y="0" width="${w}" height="13.5" rx="3" class="st-bg"/>`
     + `<text x="${lx + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${tw}" lengthAdjust="spacing">`
     + `${tip.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text></g>`) : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${lw?.css ?? ''}${lr?.css ?? ''}</style>`
-    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in"><rect width="${W}" height="41" fill="transparent"/>${crab}${label}</g></g></svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${fxCss}${lw?.css ?? ''}${lr?.css ?? ''}</style>${fx ? g('st-fx', fx) : ''}`
+    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in"><rect width="${W}" height="41" fill="transparent"/>${wall}<g class="st-tr">${crab}</g>${label}</g></g></svg>`
 }

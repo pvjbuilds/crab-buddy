@@ -32,7 +32,7 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 - 2026-10-12: Name stays crab-buddy; "claude-" names are reserved by Claude Code's validator.
 - 2026-10-12: Shipped alone. The maintainer's other mods depend on their own setup.
-- 2026-10-12: Each look holds at least 3 s (no flashing); done and test results last 5 s so
+- 2026-10-12: Each look holds at least 3 s, 8 s since 13:05 (no flashing); done and test results last 5 s so
   the hold can never swallow them. A repeat of the same mood keeps its take.
 - 2026-10-12: The caption is a log of one-liners (`LINES`, ten a mood, no "or"), newest on top:
   two lines when the crab is alone, one beside other lines and cards. The hover keeps `MEANING`.
@@ -62,6 +62,14 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
   It fades out over .2 s. Text keeps natural glyph widths (11.5 px, `lengthAdjust="spacing"`), because
   `spacingAndGlyphs` stretched it. Known limit: a new look redraws the whole SVG, which cuts the label
   instantly, with no fade (recorded 12:35).
+- 2026-10-12 (after 0.9.2): Stage extras: a failed test trips the crab and it slides back; a fix throws confetti
+  across the stage; every walk leaves fading footprints; build lays a brick wall leftward; paint walks right
+  leaving a stripe; subagents send two mini crabs across; web surfs a scrolling wave. Every extra sits under
+  `.st-fx`, hidden for reduced motion. Calmer pacing (Praj, 12:55, "feels like ocd"): a take or build scene holds
+  14 s (was 10), idle/doze/night 42 s (was 30); walks and wanders run at half speed (whole stage 4.8 s). The trip and
+  the dizzy wobble keep their pace. A take change walks idle home, so it reaches only its first wander stop.
+  Look hold (Praj, 13:05, "switches every 2-4 s"): a routine look (think, read, edit, web) holds 8 s, was 3. A held
+  look (debug, dizzy, test results, done), a question or a squish cuts straight in, so none vanishes inside the dwell.
 - Calibrated, not derived: the band's bottom margin `1.16` matches a 18.5 px line height
   (dark theme, 100% app zoom). Larger text leaves a thin line below; lower it.
 - An SVG `<style>` is parsed as XML: a `<` even inside a CSS comment drops every later rule.
@@ -69,6 +77,6 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
-2026-10-12: v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out), 37 tests pass; seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
+2026-10-12: v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks), 42 tests pass; extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab
 walked between stations. Not yet seen on Windows. README images still show 0.8.0's corner crab.

@@ -13,7 +13,10 @@ type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number
 const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle', take: 0, at: 0, log: [], from: 1 } as Look)
 // Rapid changes flashed by too fast to read (Praj, 12 Oct): a look stays at least this long, then the crab
 // jumps to whatever is current. The same mood keeps its take until the take's own clock moves it on.
-const DWELL = 3_000
+// 8 s, not 3 (Praj, 12 Oct 13:05: still swapped every 2-4 s). A held look (an error, a test result, done), a
+// question or a squish cuts straight in: a 5 s hold would vanish inside the dwell, and the trip lands on its moment.
+const DWELL = 8_000
+const CUT: ReadonlySet<Mood> = new Set(['debug', 'dizzy', 'testf', 'testp', 'fixed', 'done', 'ask', 'comp'])
 // Where the crab stands now, mid-walk or mid-wander: a new look walks on from here, never from the old spot,
 // which snapped the crab back across the stage (Praj, 12 Oct). The first look is timed from the session's start.
 let began = 0
@@ -25,8 +28,8 @@ const lines = atom({ plugin: 'crab-buddy', key: 'lines' } as const, {} as Record
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function show($: any, c: Crab, now: number) {
   const was = await read($, look)
-  if (now - was.at < DWELL) return
   const m = shown(c, now)
+  if (now - was.at < DWELL && (m === was.mood || !CUT.has(m))) return
   if (m === was.mood) {
     // A repeat (Read after Read) restarts lastActive, which would re-pick the take on every call.
     const t = take({ ...c, lastActive: was.at }, now, m)

@@ -28,16 +28,17 @@ export type CrabEvent =
 
 export const START: Crab = { mood: 'idle', until: 0, fails: 0, testFailed: false, turnAt: null, lastActive: 0 }
 
-// A held look outlasts the band's 3 s dwell plus its 1 s tick, so it can never be skipped.
+// A held look cuts through the band's dwell (register.tsx CUT), so it can never be skipped.
 const HOLD = 5_000
 const DONE = 5_000
 const LONG = 5 * 60_000
 const DOZE = 10 * 60_000
 const SWAP = 8_000
-// Building is most of a turn, so it rotates five scenes, 10 s each, counted from the turn's start (Praj, 12 Oct).
+// Building is most of a turn, so it rotates five scenes, 14 s each, counted from the turn's start (Praj, 12 Oct; 10 s
+// switched too often, 40% longer).
 // The 5 s retime tick moves it on; each switch redraws the crab once.
 export const BUILDS = ['build', 'saw', 'type', 'paint', 'gear'] as const satisfies readonly Mood[]
-const SCENE = 10_000
+const SCENE = 14_000
 // The night owl keeps the person's own clock: the host's local hour.
 const localHour = (now: number) => new Date(now).getHours()
 // Moods that only last while their tool runs; after it Claude is thinking again.
@@ -78,9 +79,9 @@ export function shown(c: Crab, now: number): Mood {
 }
 
 // Every other mood has four takes (Praj, 12 Oct: "3 more options to each state"). The first is picked by the
-// millisecond the mood began, so two test runs in a row seldom match; then the next take every 10 s. Idle,
-// doze and night owl hold a take 30 s: idle's own fidget loop runs 30 s. A held mood (done, a test result)
-// lasts under 10 s, so it never switches mid-gag.
+// millisecond the mood began, so two test runs in a row seldom match; then the next take every 14 s. Idle,
+// doze and night owl hold a take 42 s, past idle's own 30 s fidget loop. A held mood (done, a test result)
+// lasts under 14 s, so it never switches mid-gag.
 export const TAKES = 4
 const CALM: ReadonlySet<Mood> = new Set(['idle', 'doze', 'night'])
 
