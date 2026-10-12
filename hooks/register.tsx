@@ -3,17 +3,21 @@ import type { Register } from 'claude-code'
 import type { Crab, Mood } from '../types'
 import { classify, step, shown, take, setLine, START, MEANING, LINES } from './crab.ts'
 import type { CrabEvent } from './crab.ts'
-import { crabArt, stageArt, STATION } from './art.ts'
+import { crabArt, stageArt, where, STATION } from './art.ts'
 import { COLS, ROWS } from './term.tsx'
 
 const crab = atom({ plugin: 'crab-buddy', key: 'crab' } as const, START)
-// What the crab acts out, which take, since when, the caption log (newest first) and the stage station it walks
-// in from (the last mood's).
+// What the crab acts out, which take, since when, the caption log (newest first) and the stage spot it walks
+// in from.
 type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number }
 const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle', take: 0, at: 0, log: [], from: 1 } as Look)
 // Rapid changes flashed by too fast to read (Praj, 12 Oct): a look stays at least this long, then the crab
 // jumps to whatever is current. The same mood keeps its take until the take's own clock moves it on.
 const DWELL = 3_000
+// Where the crab stands now, mid-walk or mid-wander: a new look walks on from here, never from the old spot,
+// which snapped the crab back across the stage (Praj, 12 Oct). The first look is timed from the session's start.
+let began = 0
+const here = (x: Look, now: number) => (x.at || began) > 0 ? where(x.mood, x.from ?? STATION[x.mood], (now - (x.at || began)) / 1000) : STATION[x.mood]
 // Every plugin's status line, by plugin, drawn in the crab's bar instead of the footer's "+1" overflow.
 const lines = atom({ plugin: 'crab-buddy', key: 'lines' } as const, {} as Record<string, string>)
 
@@ -26,13 +30,13 @@ async function show($: any, c: Crab, now: number) {
   if (m === was.mood) {
     // A repeat (Read after Read) restarts lastActive, which would re-pick the take on every call.
     const t = take({ ...c, lastActive: was.at }, now, m)
-    if (t !== was.take) await update($, look, x => ({ ...x, take: t, at: now, from: STATION[m] }))
+    if (t !== was.take) await update($, look, x => ({ ...x, take: t, at: now, from: here(x, now) }))
     return
   }
   const t = take(c, now, m)
   // A one-liner picked by the millisecond the mood came up; the caption scrolls down one line.
   const line = LINES[m][now % LINES[m].length]
-  await update($, look, x => ({ mood: m, take: t, at: now, from: STATION[x.mood], log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
+  await update($, look, x => ({ mood: m, take: t, at: now, from: here(x, now), log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,6 +65,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const now = await $.clock.now()
     await update($, crab, c => ({ ...c, lastActive: now }))
+    began = now
     // Timed moods (done, a test result, doze, night owl, long turn) change with no event; 1 s also ends a dwell on time.
     $.clock.every(1_000, () => retime($))
     return next(e)
@@ -183,10 +188,11 @@ export const register: Register = on => {
               ? <Svg source={stageArt(m, t, from ?? STATION[m])} alt={`Claude crab: ${m}`} width={2000} height={41} />
               : <Svg source={crabArt(m, t)} alt={`Claude crab: ${m}`} width={52} height={41} />}
             {/* Pointer on the crab: what this animation means, floated left over the lines so nothing moves (Praj, 12 Oct).
-                Top row of the band, which clips anything placed outside it. */}
+                Top row of the band, which clips anything placed outside it. The crab's own orange and dark ink, the
+                same in every theme: text/inverseText came out unreadable on Windows in both (Praj, 12 Oct). */}
             <Box position="absolute" top={0} right={8} display="none" hover={{ display: 'flex' }}
-              backgroundColor="text" paddingX={1}>
-              <Text color="inverseText" wrap="truncate-end">{MEANING[m]}</Text>
+              backgroundColor="#D97757" paddingX={1}>
+              <Text color="#1F1E1D" wrap="truncate-end">{MEANING[m]}</Text>
             </Box>
           </Box>
         </Box>

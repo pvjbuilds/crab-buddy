@@ -145,7 +145,9 @@ test('the caption: two one-liners when the crab is alone, one beside other lines
 // Praj, 12 Oct: on Windows the desktop app was light while Claude Code's own theme setting said dark, so a
 // band painted by that setting stayed dark. The desktop resolves theme keys by the app's own theme (live
 // probe 10:58: userMessageBackground is the transcript, #151515 dark and #fcfcfb light), so no hex is drawn.
-test('theme: the band and the hover label paint theme keys, never a hex, whatever the theme setting says', async ($, on) => {
+// The hover label is the exception: on Windows its text/inverseText keys came out unreadable in both themes
+// (Praj's photos, 12 Oct 11:15), so it wears the crab's own colours, the same in every theme.
+test('theme: the band paints theme keys, never a hex; the hover label is crab orange with dark text in every theme', async ($, on) => {
   mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: 'dark', provider: { kind: 'engine' } }] }) as never)
   on('session.start', () => ({ cwd: '/p' }) as never)
@@ -154,13 +156,13 @@ test('theme: the band and the hover label paint theme keys, never a hex, whateve
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
   const drawn = await m.drawn() as never as El
-  // Every colour prop outside the crab's own SVG art is a theme key.
+  const tip = kids(await m.find({ key: 'crab-buddy' }) as never as El).find(k => k.props?.position === 'absolute')
+  // Every colour prop outside the crab's own SVG art and its hover label is a theme key.
   const colours: string[] = []
-  const walk = (e: El) => { for (const k of ['backgroundColor', 'color']) if (typeof e.props?.[k] === 'string') colours.push(e.props[k] as string); kids(e).forEach(walk) }
+  const walk = (e: El) => { if (e.props?.position === 'absolute') return; for (const k of ['backgroundColor', 'color']) if (typeof e.props?.[k] === 'string') colours.push(e.props[k] as string); kids(e).forEach(walk) }
   walk(drawn)
   expect(colours.filter(c => c.startsWith('#'))).toEqual([])
-  const tip = kids(await m.find({ key: 'crab-buddy' }) as never as El).find(k => k.props?.position === 'absolute')
-  expect([tip?.props?.backgroundColor, kids(tip)[0]?.props?.color]).toEqual(['text', 'inverseText'])
+  expect([tip?.props?.backgroundColor, kids(tip)[0]?.props?.color]).toEqual(['#D97757', '#1F1E1D'])
 })
 
 // Praj, 12 Oct: rapid changes flashed by too fast to read. Each look stays at least 3 s, then the crab jumps
@@ -210,6 +212,21 @@ test('stage: on a wide band the crab moves in the right half; on a narrow one it
   expect([narrow.box?.width, narrow.svg?.width, narrow.svg?.height]).toEqual([undefined, 52, 41])
 })
 
+test('stage: a new look walks on from where the crab has wandered to, never from its old spot', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('turn.start', () => ({ turnId: 't1' }) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 108 } as never
+  const src = async () => String((await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).find({ type: 'Svg' }))?.props?.source)
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  // 25 s into idle's 40 s wander it rests three quarters of the way to the left (the 60% to 72% stop: 1 - .75).
+  await clock.advance(25_000)
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await clock.advance(1_000)
+  expect(await src()).toContain('@keyframes st-go{0%{transform:translateX(calc((100% - 52px) * 0.25))}100%{transform:translateX(calc((100% - 52px) * 0.85))}}')
+})
+
 test('stage: a new look scuttles in from where the last one stood; a new take of the same look stays put', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   on('session.start', () => ({ cwd: '/p' }) as never)
@@ -225,7 +242,9 @@ test('stage: a new look scuttles in from where the last one stood; a new take of
   await clock.advance(3_000)
   // Thinking: from idle's spot at the right end to think's, a little to the left.
   expect(await src()).toContain('@keyframes st-go{0%{transform:translateX(calc((100% - 52px) * 1))}100%{transform:translateX(calc((100% - 52px) * 0.85))}}')
-  await $.tool.call({ tool: 'Read', file_path: '/a' } as never)
+  // Thinking walks in, then sways left; 6 s in it rests at its 45% to 55% stop (.85 - .3).
   await clock.advance(3_000)
-  expect(await src()).toContain('0%{transform:translateX(calc((100% - 52px) * 0.85))}100%{transform:translateX(calc((100% - 52px) * 0.65))}')
+  await $.tool.call({ tool: 'Read', file_path: '/a' } as never)
+  await clock.advance(1_000)
+  expect(await src()).toContain('0%{transform:translateX(calc((100% - 52px) * 0.55))}100%{transform:translateX(calc((100% - 52px) * 0.65))}')
 })

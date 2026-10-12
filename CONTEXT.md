@@ -39,7 +39,12 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 - 2026-10-12 (0.9.0): Desktop band paints the theme key `userMessageBackground`, never a hex. The old
   read of the CLI `theme` setting ignored the desktop app's own appearance, so light mode on Windows
   (and Mac) got a dark band. Keys follow the app live; hex, names and keys are the only accepted
-  colours (CSS functions are refused). Hover label: `text` on `inverseText`.
+  colours (CSS functions are refused).
+- 2026-10-12 (0.9.1): Hover label is crab orange #D97757 with #1F1E1D text in every theme. `text` on
+  `inverseText` read fine on the Mac but was unreadable on Windows in both themes (Praj's photos).
+- 2026-10-12 (0.9.1): A new look or take walks on from where the crab stands now (`where()`: the walk,
+  then the wander, with CSS ease-in-out solved in code), never from the old mood's spot, which snapped it
+  back. Walks take 2.4 s per full stage (min .4 s); the wander starts after the walk.
 - 2026-10-12 (0.9.0): Stage: on a band of 60+ columns the crab's Box is `width="50%"` and the SVG has
   markup `width="100%"` with no viewBox (Svg prop width 2000, capped by the Box). A numeric markup
   width scales the crab. Position is `translateX(calc((100% - 52px) * f))` with `transform-box:view-box`;
@@ -58,6 +63,6 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
-2026-10-12: v0.9.0 (stage + live theme keys), 34 tests pass. Seen live in the maintainer's Mac desktop
+2026-10-12: v0.9.1 (no snap-back, readable hover label), 35 tests pass. v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab
 walked between stations. Not yet seen on Windows. README images still show 0.8.0's corner crab.

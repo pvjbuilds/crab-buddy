@@ -327,29 +327,51 @@ export const STATION: Record<Mood, number> = {
   debug: .35, dizzy: .35, fixed: .5, done: 1, doze: 1, night: 1, web: .7, sub: .6, codex: .6, git: .4, inst: .55, ask: 1,
   long: .5, comp: 1,
 }
-// [cycle, keyframe stops as [percent, offset from the station]]; every stop stays inside the stage.
-const ROAM: Partial<Record<Mood, [string, [string, number][]]>> = {
-  idle: ['40s', [['0%,15%', 0], ['30%,45%', -.4], ['60%,72%', -.75], ['90%,100%', 0]]],
-  think: ['12s', [['0%,10%', 0], ['45%,55%', -.3], ['90%,100%', 0]]],
-  read: ['16s', [['0%', 0], ['50%', -.25], ['100%', 0]]],
-  web: ['6s', [['0%', 0], ['50%', -.35], ['100%', 0]]],
-  done: ['5s', [['0%', 0], ['45%,55%', -.8], ['100%', 0]]],
-  long: ['20s', [['0%', 0], ['50%', -.2], ['100%', 0]]],
-  dizzy: ['2.4s', [['0%,100%', 0], ['25%', -.04], ['75%', .04]]],
+// [cycle in s, keyframe stops as [percent, offset from the station]]; every stop stays inside the stage.
+const ROAM: Partial<Record<Mood, [number, [string, number][]]>> = {
+  idle: [40, [['0%,15%', 0], ['30%,45%', -.4], ['60%,72%', -.75], ['90%,100%', 0]]],
+  think: [12, [['0%,10%', 0], ['45%,55%', -.3], ['90%,100%', 0]]],
+  read: [16, [['0%', 0], ['50%', -.25], ['100%', 0]]],
+  web: [6, [['0%', 0], ['50%', -.35], ['100%', 0]]],
+  done: [5, [['0%', 0], ['45%,55%', -.8], ['100%', 0]]],
+  long: [20, [['0%', 0], ['50%', -.2], ['100%', 0]]],
+  dizzy: [2.4, [['0%,100%', 0], ['25%', -.04], ['75%', .04]]],
 }
 const W = 52
 const x = (f: number) => `translateX(calc((100% - ${W}px) * ${+f.toFixed(3)}))`
+// Seconds to walk from `from` to `to`: the whole stage in 2.4 s, never under .4 s; 0 when already there.
+const walkFor = (from: number, to: number) => Math.abs(from - to) > .001 ? Math.max(.4, 2.4 * Math.abs(from - to)) : 0
+// CSS ease-in-out (cubic-bezier(.42,0,.58,1)): how far along at progress u, solved by bisection.
+function ease(u: number) {
+  let a = 0, b = 1
+  for (let i = 0; i < 30; i++) { const m = (a + b) / 2; if (3 * m * (1 - m) ** 2 * .42 + 3 * m * m * (1 - m) * .58 + m ** 3 < u) a = m; else b = m }
+  const m = (a + b) / 2
+  return 3 * m * m * (1 - m) + m ** 3
+}
 
-/** The crab acting out take `t` of `mood` on the stage, walking in from station `from` (0 to 1). */
+/** Where the crab stands (0 to 1) `s` seconds into a look of `mood` that walked in from `from`: the walk, then the wander. */
+export function where(mood: Mood, from: number, s: number): number {
+  const to = STATION[mood], d = walkFor(from, to), roam = ROAM[mood]
+  if (s < d) return from + (to - from) * ease(s / d)
+  if (!roam) return to
+  const p = (s - d) % roam[0] / roam[0] * 100
+  const stops = roam[1].flatMap(([ps, v]) => ps.split(',').map(q => [parseFloat(q), v] as const)).sort((a, b) => a[0] - b[0])
+  const i = stops.findIndex(([q]) => q >= p), [q1, v1] = stops[Math.max(i, 0)], [q0, v0] = stops[Math.max(i - 1, 0)]
+  return to + (q1 > q0 ? v0 + (v1 - v0) * ease((p - q0) / (q1 - q0)) : v1)
+}
+
+/** The crab acting out take `t` of `mood` on the stage, walking in from `from` (0 to 1), then wandering. */
 export function stageArt(mood: Mood, t = 0, from = STATION[mood]): string {
-  const to = STATION[mood], go = Math.abs(from - to) > .001, roam = ROAM[mood]
+  const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = ROAM[mood]
   const crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
+  const steps = Math.ceil(d / .2)
   const css = '.st-at,.st-in{transform-box:view-box}'
     + `.st-at{transform:${x(to)}}`
-    + (go ? `.st-go{animation:st-go 1.2s ease-in-out}@keyframes st-go{0%{transform:${x(from)}}100%{transform:${x(to)}}}`
-      + '.st-go .cb:not(.cb-walk) .cb-la{animation:cb-st .2s ease-in-out 6}.st-go .cb:not(.cb-walk) .cb-lb{animation:cb-st .2s ease-in-out 6 -.1s}' : '')
-    + (roam ? `.st-in{animation:st-r ${roam[0]} ease-in-out infinite}@keyframes st-r{${roam[1].map(([p, d]) => `${p}{transform:${x(d)}}`).join('')}}`
-      + '.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out infinite}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out infinite -.2s}' : '')
+    + (go ? `.st-go{animation:st-go ${+d.toFixed(2)}s ease-in-out}@keyframes st-go{0%{transform:${x(from)}}100%{transform:${x(to)}}}`
+      + `.st-go .cb:not(.cb-walk) .cb-la{animation:cb-st .2s ease-in-out ${steps}}.st-go .cb:not(.cb-walk) .cb-lb{animation:cb-st .2s ease-in-out ${steps} -.1s}` : '')
+    // The wander waits for the walk in, so the crab never jumps between the two.
+    + (roam ? `.st-in{animation:st-r ${roam[0]}s ease-in-out ${+d.toFixed(2)}s infinite}@keyframes st-r{${roam[1].map(([p, v]) => `${p}{transform:${x(v)}}`).join('')}}`
+      + `.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out ${+d.toFixed(2)}s infinite}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out ${+(d + .2).toFixed(2)}s infinite}` : '')
   return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}</style>`
     + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in">${crab}</g></g></svg>`
 }
