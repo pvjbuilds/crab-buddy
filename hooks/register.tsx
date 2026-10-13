@@ -181,8 +181,9 @@ export const register: Register = on => {
             {row}
             {info && rest}
             {/* Crab alone in the band: its caption fills the left, so the bar is never an empty strip (Praj, 12 Oct). */}
-            {/* Two lines when the crab is alone, the newest only beside other lines and cards (Praj, 12 Oct). */}
-            {(info ? log.slice(0, 1) : log).map((l, i) => <Text key={l} color={i === 0 ? 'inactive' : 'subtle'} wrap="truncate-end">{l}</Text>)}
+            {/* Both lines always, newest on top in full text colour, the one before dimmer (Praj, 14 Oct: beside a
+                status line the older one was dropped, which read as the line hiding it). */}
+            {log.map((l, i) => <Text key={l} color={i === 0 ? 'text' : 'subtle'} wrap="truncate-end">{l}</Text>)}
           </Box>
           {/* The right half is the crab's stage (Praj, 12 Oct). The Svg asks for more than the half and is capped to it.
               Under 60 columns the half is too small to walk in, and the crab stands as before. */}

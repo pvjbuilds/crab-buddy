@@ -34,8 +34,9 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 - 2026-10-12: Shipped alone. The maintainer's other mods depend on their own setup.
 - 2026-10-12: Each look holds at least 3 s, 8 s since 13:05 (no flashing); done and test results last 5 s so
   the hold can never swallow them. A repeat of the same mood keeps its take.
-- 2026-10-12: The caption is a log of one-liners (`LINES`, ten a mood, no "or"), newest on top:
-  two lines when the crab is alone, one beside other lines and cards. The hover keeps `MEANING`.
+- 2026-10-12: The caption is a log of one-liners (`LINES`, ten a mood, no "or"), newest on top. The hover keeps `MEANING`.
+- 2026-10-14 (0.9.5): Both caption lines always show, beside other lines and cards too, newest in `text` (white in
+  dark), the older in `subtle`. Beside a status line the older one used to be dropped, which read as the line hiding it.
 - 2026-10-12 (0.9.0): Desktop band paints the theme key `userMessageBackground`, never a hex. The old
   read of the CLI `theme` setting ignored the desktop app's own appearance, so light mode on Windows
   (and Mac) got a dark band. Keys follow the app live; hex, names and keys are the only accepted
@@ -80,6 +81,7 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
+2026-10-14: v0.9.5 (two caption lines always, newest in full text colour), 43 tests pass; seen live in dark and light (02:10-02:12).
 2026-10-12: v0.9.4 (the "?" follows real permission dialogs only), 43 tests pass. v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks); extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab
 walked between stations. Not yet seen on Windows. README images still show 0.8.0's corner crab.

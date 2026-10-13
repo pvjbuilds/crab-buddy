@@ -131,7 +131,7 @@ test('idle moves on to its next take after 42 s, still idle (Praj, 12 Oct)', asy
   expect(a?.source).not.toBe(b?.source)
 })
 
-test('the caption: two one-liners when the crab is alone, one beside other lines and cards (Praj, 12 Oct)', async ($, on) => {
+test('the caption: the newest one-liner in full text colour, alone or beside other lines and cards (Praj, 14 Oct)', async ($, on) => {
   let card = false
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return (card ? h(Box, {}, h(Text, {}, 'card')) : h(Box, {})) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
@@ -139,7 +139,7 @@ test('the caption: two one-liners when the crab is alone, one beside other lines
   const left = async () => kids(await (await mount()).find({ key: 'crab-text' }) as never as El)
   const [cap] = await left()
   // Before anything happens: idle's first line.
-  expect([cap?.props?.color, cap?.children]).toEqual(['inactive', ['Waiting for your next idea.']])
+  expect([cap?.props?.color, cap?.children]).toEqual(['text', ['Waiting for your next idea.']])
   card = true
   const withCard = await left()
   expect(JSON.stringify(withCard.at(-1))).toContain('Waiting for your next idea.')
@@ -174,12 +174,13 @@ test('theme: every colour the band paints is a theme key; the stage label lives 
 
 // Praj, 12 Oct: rapid changes flashed by too fast to read. Each look stays at least 3 s (8 s since 13:05), then the crab jumps
 // to whatever is current; the caption scrolls like a terminal, newest on top, the one before it dimmer below.
+// Praj, 14 Oct: both lines show beside other lines too (a status line above them hid the older one), newest in white.
 test('no flashing: a look holds 8 s, repeats keep their take, and the caption scrolls down a line at a time', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   on('session.start', () => ({ cwd: '/p' }) as never)
   on('tool.call', () => ({ result: {} }) as never)
   on('turn.start', () => ({ turnId: 't1' }) as never)
-  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const band = async () => { const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props }); return { svg: (await m.find({ type: 'Svg' }))?.props, text: kids(await m.find({ key: 'crab-text' }) as never as El) } }
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
@@ -199,8 +200,8 @@ test('no flashing: a look holds 8 s, repeats keep their take, and the caption sc
   // 16.5 s into the turn: building has moved on to its second scene, the saw.
   expect(c.svg?.alt).toBe('Claude crab: saw')
   // A one-liner from each job, newest on top; the plain meaning stays on the hover label.
-  const [top, below] = c.text.map(t => [t.props?.color, (t.children as string[])[0]])
-  expect([top[0], LINES.build.includes(top[1] as string), below[0], LINES.read.includes(below[1] as string)]).toEqual(['inactive', true, 'subtle', true])
+  const [top, below] = c.text.slice(-2).map(t => [t.props?.color, (t.children as string[])[0]])
+  expect([top[0], LINES.build.includes(top[1] as string), below[0], LINES.read.includes(below[1] as string)]).toEqual(['text', true, 'subtle', true])
 })
 
 // Praj, 12 Oct 13:05: looks still swapped every 2-4 s. A routine look holds 8 s; a test result, a question, the
