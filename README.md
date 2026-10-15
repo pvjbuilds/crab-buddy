@@ -5,7 +5,7 @@ out what Claude is doing.** It reads with a magnifier, hammers while files chang
 tests pass and dozes off when you step away. It works in the Claude Code desktop app and in the
 terminal, in light and dark themes, and it uses **0 tokens**.
 
-![Crab Buddy cycling through moods above the prompt: thinking, reading with a magnifier, hammering, a green check for passing tests, and done. A caption on the left scrolls one-liners such as 'Skimming code at crab speed.' and 'All green. Happy crab.'](docs/hero.png)
+![Crab Buddy walking across its stage above the prompt: thinking, reading with a magnifier, hammering while a brick wall grows, a green check for passing tests, and done, leaving footprints between spots. A caption on the left scrolls one-liners, the newest such as 'All green. Happy crab.' in full colour and the one before dimmer under it](docs/hero.png)
 
 ```bash
 claude plugin marketplace add pvjbuilds/crab-buddy
@@ -20,7 +20,7 @@ Start a new session and the crab is there.
 
 | Dark theme | Light theme |
 |---|---|
-| ![Claude Code desktop app, dark theme: the crab hammers at the bottom right of the band above the prompt box, with the caption 'Hammering out the changes.' and 'Skimming code at crab speed.' below it.](docs/app-dark.png) | ![Claude Code desktop app, light theme: the same crab and caption on the app's light background.](docs/app-light.png) |
+| ![Claude Code desktop app, dark theme: the crab hammers on the right half of the band above the prompt box, laying a brick wall as it goes. The caption on the left shows 'Hammering out the changes.' in full colour and 'Skimming code at crab speed.' dimmer below it.](docs/app-dark.png) | ![Claude Code desktop app, light theme: the same crab and caption on the app's light background.](docs/app-light.png) |
 
 ### Terminal
 
@@ -91,8 +91,8 @@ The crab shows in sessions started after an install or update.
 
 - **Other plugins' status lines move into the crab's band,** so they show in one place instead
   of piling up in the footer. Turn Crab Buddy off and they go back to the footer.
-- **The caption gives way.** With the crab alone it shows two lines; next to other plugins'
-  lines it shows one.
+- **The caption always shows two lines.** The newest in full text colour, the one before it
+  dimmer, whether or not other plugins' lines sit beside it.
 - **In the terminal, a theme change shows in the next session.** The terminal theme is read
   when a session starts.
 - **The band is tuned for 100% app zoom.** At other zoom levels the app may leave a thin line at
