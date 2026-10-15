@@ -299,3 +299,31 @@ test('stage: a new look scuttles in from where the last one stood; a new take of
   await clock.advance(1_000)
   expect(await src()).toContain('0%{transform:translateX(calc((100% - 52px) * 0.55))}100%{transform:translateX(calc((100% - 52px) * 0.65))}')
 })
+
+test('compacting shows only when a compaction really runs: a vetoed one never squishes the crab (Praj, 16 Oct)', async ($, on) => {
+  mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('turn.start', () => ({ turnId: 't1' }) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const alt = async () => (await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).find({ type: 'Svg' }))?.props?.alt
+  // Core: the settings PreCompact gate runs first; a block leaves the conversation as it is.
+  let gate: { block?: string } = {}
+  const msgs = [{ role: 'user', text: 'hi', toolUses: [] }]
+  const seen: unknown[] = []
+  on('classic.PreCompact', () => gate as never)
+  on('session.compact', async (_$$, e) => {
+    const r = await $.classic.PreCompact({ hook_event_name: 'PreCompact', trigger: (e as { trigger: string }).trigger, custom_instructions: null } as never)
+    seen.push(await alt())
+    return ((r as { block?: string }).block ? { skip: 'held mid-task' } : { messages: msgs }) as never
+  })
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  gate = { block: 'mid-task' }
+  await $.session.compact({ trigger: 'auto', messages: msgs } as never)
+  expect(seen).toEqual(['Claude crab: think'])
+  expect(await alt()).toBe('Claude crab: think')
+  gate = {}
+  await $.session.compact({ trigger: 'auto', messages: msgs } as never)
+  expect(seen[1]).toBe('Claude crab: comp')
+})

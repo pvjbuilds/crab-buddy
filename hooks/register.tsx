@@ -104,14 +104,29 @@ export const register: Register = on => {
   // A precompute runs unseen in the background, and a subagent's compaction is its own: neither squishes the crab.
   // No 🦀 emoji: the real crab squishes right beside the line (Praj, 11 Oct). The bar line doubles as a trace: Praj saw no squish on 11 Oct's auto compaction; line but no squish = drawing,
   // neither = the hook never fired.
+  // The squish waits for the settings PreCompact hooks: one that blocks (Praj's compact_gate.py holds auto-compaction
+  // mid-task) leaves the conversation as it is, and the crab squished for nothing (Praj, 16 Oct).
+  let armed: string | undefined, squished = false
   on('session.compact', async ($, e, next) => {
     if (e.trigger === 'precompute' || isSub(e)) return next(e)
-    await apply($, { kind: 'compact' })
-    await update($, lines, l => setLine(l, 'crab-buddy', `Compacting (${e.trigger})`))
+    armed = e.trigger
     try { return await next(e) } finally {
-      await apply($, { kind: 'compactEnd' })
-      await update($, lines, l => setLine(l, 'crab-buddy', undefined))
+      armed = undefined
+      if (squished) {
+        squished = false
+        await apply($, { kind: 'compactEnd' })
+        await update($, lines, l => setLine(l, 'crab-buddy', undefined))
+      }
     }
+  })
+  on('classic.PreCompact', async ($, e, next) => {
+    const r = await next(e)
+    if (armed && !r.block && !r.preventContinuation) {
+      squished = true
+      await apply($, { kind: 'compact' })
+      await update($, lines, l => setLine(l, 'crab-buddy', `Compacting (${armed})`))
+    }
+    return r
   })
 
   // Cache warm stays in the footer, beside the model name, and not again in the bar (Praj, 11 Oct).
