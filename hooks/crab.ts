@@ -78,18 +78,24 @@ export function shown(c: Crab, now: number): Mood {
   return now - c.lastActive >= DOZE ? 'doze' : 'idle'
 }
 
-// Every other mood has four takes (Praj, 12 Oct: "3 more options to each state"). The first is picked by the
+// Every other mood has four takes (Praj, 12 Oct: "3 more options to each state"), the busiest nine (16 Oct). The first is picked by the
 // millisecond the mood began, so two test runs in a row seldom match; then the next take every 14 s. Idle,
 // doze and night owl hold a take 42 s, past idle's own 30 s fidget loop. A held mood (done, a test result)
 // lasts under 14 s, so it never switches mid-gag.
-export const TAKES = 4
 const CALM: ReadonlySet<Mood> = new Set(['idle', 'doze', 'night'])
+// The looks a long task shows most get five more takes (Praj, 16 Oct: "quite repetitive").
+const BUSY: ReadonlySet<Mood> = new Set(['think', 'read', 'test', 'long'])
+const isBuild = (m: Mood) => (BUILDS as readonly Mood[]).includes(m)
 
-/** Which of its takes `mood` plays at `now`: 0 for the build scenes, which rotate on their own. */
+/** How many takes `mood` has: each build scene has a second, for the build's second lap. */
+export const takes = (mood: Mood) => isBuild(mood) ? 2 : BUSY.has(mood) ? 9 : 4
+
+/** Which of its takes `mood` plays at `now`. A build scene changes take with each lap of the five, so a long build
+ *  shows ten scenes before one repeats (Praj, 16 Oct: weld, drill, blueprint, sweep, crane). */
 export function take(c: Crab, now: number, mood: Mood): number {
-  if ((BUILDS as readonly Mood[]).includes(mood)) return 0
+  if (isBuild(mood)) return c.turnAt === null ? 0 : Math.floor((now - c.turnAt) / (SCENE * BUILDS.length)) % 2
   const held = Math.max(0, now - c.lastActive)
-  return (c.lastActive + Math.floor(held / (CALM.has(mood) ? 3 * SCENE : SCENE))) % TAKES
+  return (c.lastActive + Math.floor(held / (CALM.has(mood) ? 3 * SCENE : SCENE))) % takes(mood)
 }
 
 /** The status lines by plugin after `who` set `text`; an empty text takes its line away. */
@@ -131,6 +137,8 @@ const BUILD_LINES = [
   'Hammering out the changes.', 'Building it, brick by brick.', 'Writing code with both claws.',
   'Under construction. Hard hat on.', 'Making edits. Sawdust everywhere.', 'Typing faster than a crab can scuttle.',
   'Running commands, claws crossed.', 'Shaping your code into place.', 'Measure twice, edit once.', 'Gears turning, files changing.',
+  'Welding the pieces together.', 'Drilling into the details.', 'Drafting the blueprint.', 'Sweeping up after the edits.',
+  'Craning the next block into place.',
 ] as const
 
 /** The band caption: ten one-liners a mood, one picked at random each time the mood comes up (Praj, 12 Oct:
@@ -141,14 +149,17 @@ export const LINES: Record<Mood, readonly string[]> = {
     'Nothing to do. Living the crab life.', 'All quiet on the shoreline.'],
   think: ['Thinking it through, sideways.', 'Hmm. Clicking claws in thought.', 'Connecting the dots…', 'Weighing it up, claw by claw.',
     'Brain in motion, legs at rest.', 'Plotting the next move.', 'Deep in thought. Do not poke the crab.', 'Considering every angle. Crabs have many.',
-    'Cooking up a plan.', 'One sec, an idea is surfacing.'],
+    'Cooking up a plan.', 'One sec, an idea is surfacing.', 'Mulling it over on the seafloor.',
+    'Moving the pieces around in my head.', 'Sketching the plan on the board.', 'Fitting the puzzle together.', 'Aha! Something just clicked.'],
   read: ['Reading your files so you don\'t have to.', 'Skimming code at crab speed.', 'Nose in the source.', 'Digging through files like sand.',
     'Hunting for the right line.', 'Reading the fine print.', 'Searching every nook and cranny.', 'Taking notes with a claw.',
-    'Getting to know your codebase.', 'Turning pages, turning over rocks.'],
+    'Getting to know your codebase.', 'Turning pages, turning over rocks.', 'Catching up on the code news.',
+    'Scanning the horizon for clues.', 'Flipping through the file drawer.', 'Scanning line by line.', 'Mapping out the codebase.'],
   build: BUILD_LINES, saw: BUILD_LINES, type: BUILD_LINES, paint: BUILD_LINES, gear: BUILD_LINES,
   test: ['Running the tests. Claws crossed.', 'Moment of truth: tests running.', 'Putting the code through its paces.', 'Checking the work before you do.',
     'Tests running. Holding my breath.', 'Poking the code to see if it squeaks.', 'Let\'s see what breaks.', 'Science time: running the experiment.',
-    'Testing, testing, one two three.', 'Waiting on the verdict.'],
+    'Testing, testing, one two three.', 'Waiting on the verdict.', 'Taking the code\'s temperature.',
+    'Weighing the results.', 'Poking it to see if it wobbles.', 'Under the microscope.', 'Progress bar filling up.'],
   testp: ['All green. Happy crab.', 'Tests pass! Claws in the air.', 'Green across the board.', 'Nailed it. Every test passes.',
     'Passing with flying colours.', 'The tests approve.', 'Clean run. Not a single failure.', 'Gold star for this code.',
     'Everything checks out.', 'Tests pass. Doing a little dance.'],
@@ -193,7 +204,8 @@ export const LINES: Record<Mood, readonly string[]> = {
     'A question awaits you.', 'Paused until you answer.'],
   long: ['Long task. Coffee break for the crab.', 'Still going. Big job.', 'A marathon, not a sprint.', 'This one takes a while.',
     'Hang tight, still working.', 'Deep in the weeds.', 'Time flies when you\'re coding.', 'Persistence pays off.',
-    'Worth the wait. Probably.', 'Still at it. Sweating a little.'],
+    'Worth the wait. Probably.', 'Still at it. Sweating a little.', 'Fanning myself. Long one.',
+    'Snack break, still on it.', 'The clock keeps ticking.', 'Running low, still running.', 'Jogging through a long task.'],
   comp: ['Compacting the conversation.', 'Squeezing the chat to fit.', 'Packing light for the road ahead.', 'Summarizing what we\'ve done.',
     'Making room for more.', 'Tidying up the context.', 'Folding the memories neatly.', 'Shrinking the transcript.',
     'Condensing, not forgetting.', 'Spring cleaning the context.'],

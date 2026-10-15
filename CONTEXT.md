@@ -37,6 +37,15 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 - 2026-10-12: The caption is a log of one-liners (`LINES`, ten a mood, no "or"), newest on top. The hover keeps `MEANING`.
 - 2026-10-14 (0.9.5): Both caption lines always show, beside other lines and cards too, newest in `text` (white in
   dark), the older in `subtle`. Beside a status line the older one used to be dropped, which read as the line hiding it.
+- 2026-10-16 (0.10.0): Compacting shows only when a compaction really runs. The squish waits for `classic.PreCompact`:
+  a settings PreCompact hook that blocks (Praj's `compact_gate.py` holds auto-compaction mid-task) used to leave the
+  crab squishing near the threshold for nothing.
+- 2026-10-16 (0.10.0): Busy looks (think, read, test, long) have nine takes; each build scene a second take on the
+  build's second lap (weld, drill, blueprint, sweep, crane), so ten scenes before one repeats. Five more caption
+  lines for each. No new moods, so the terminal and hover labels are unchanged.
+- 2026-10-16 (0.10.0): Every take is a 14 s scene, not one short loop: two beats (hop, admire, turn, stretch,
+  shimmy, tilt) at ~5 s and ~10 s, each with an emote, picked per take from a hash of its name. Doze sleeps through.
+- 2026-10-16: The crab's band stays crab height; 0.9.6's full-width status row is parked in `git stash`.
 - 2026-10-12 (0.9.0): Desktop band paints the theme key `userMessageBackground`, never a hex. The old
   read of the CLI `theme` setting ignored the desktop app's own appearance, so light mode on Windows
   (and Mac) got a dark band. Keys follow the app live; hex, names and keys are the only accepted
@@ -81,6 +90,7 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
+2026-10-16: v0.10.0 (compacting only when real; nine takes for busy looks, ten build scenes; 14 s scenes with beats), 46 tests pass. README shots via `bun docs/shots/make.ts`. Not yet seen live.
 2026-10-14: v0.9.5 (two caption lines always, newest in full text colour), 43 tests pass; seen live in dark and light (02:10-02:12).
 2026-10-12: v0.9.4 (the "?" follows real permission dialogs only), 43 tests pass. v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks); extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab

@@ -173,6 +173,52 @@ const CSS = `<style>
 @keyframes cb-shrink{0%,10%{transform:scaleY(1)}70%,90%{transform:scaleY(.3)}100%{transform:scaleY(1)}}
 .cb-comp3 .cb-pl{animation:cb-press 2s ease-in-out infinite}.cb-comp3 .cb-bx{transform-origin:50% 100%;animation:cb-squash 2s ease-in-out infinite}
 @keyframes cb-press{50%{transform:translateY(12px)}}@keyframes cb-squash{50%{transform:scaleY(.6)}}
+/* Five more takes for the looks a long task shows most, and a second take a build scene (Praj, 16 Oct). */
+.cb-think4 .cb-ey{transform:translate(-1px,1px)}.cb-think4 .cb-pn{animation:cb-mv 3s ease-in-out infinite}.cb-think4 .cb-ar{animation:cb-tap 3s ease-in-out infinite}
+@keyframes cb-mv{0%,40%{transform:translate(0,0)}55%{transform:translate(2px,-3px)}70%,100%{transform:translate(4px,0)}}
+.cb-think5 .cb-pr{transform-origin:50% 50%;animation:cb-spin 3s linear infinite}.cb-think5 .cb-ey{animation:cb-look 3s ease-in-out infinite}
+.cb-think6 .cb-c1{animation:cb-b1 4s linear infinite}.cb-think6 .cb-c2{animation:cb-b2 4s linear infinite}.cb-think6 .cb-c3{animation:cb-b3 4s linear infinite}
+.cb-think6 .cb-ey{transform:translate(-1px,-1px)}.cb-think6 .cb-bd{animation:cb-bob 2s ease-in-out infinite}
+.cb-think7 .cb-pz{animation:cb-fit 3s ease-in-out infinite}.cb-think7 .cb-ey{transform:translateX(-1px)}
+@keyframes cb-fit{0%,15%,100%{transform:translate(-2px,-5px) rotate(20deg)}55%,85%{transform:translate(0,0) rotate(0)}}
+.cb-think8 .cb-x1{animation:cb-alt 3s linear infinite}.cb-think8 .cb-x2{animation:cb-alt 3s linear infinite -1.5s}.cb-think8 .cb-ar{animation:cb-up 1.5s ease-in-out infinite}
+.cb-read4 .cb-np{animation:cb-shake 2.4s ease-in-out infinite}.cb-read4 .cb-ey{animation:cb-scan 1.6s ease-in-out infinite}
+@keyframes cb-shake{0%,70%,80%,100%{transform:translateY(0)}75%{transform:translateY(-1px)}}
+.cb-read5 .cb-pr{transform-origin:0 100%;animation:cb-sweep 4s ease-in-out infinite}.cb-read5 .cb-ey{transform:translate(1px,-1px)}
+@keyframes cb-sweep{0%,100%{transform:rotate(0)}50%{transform:rotate(-12deg)}}
+.cb-read6 .cb-dr{animation:cb-open 3s ease-in-out infinite}.cb-read6 .cb-cd{animation:cb-peek 3s linear infinite}.cb-read6 .cb-ey{transform:translate(-1px,1px)}
+@keyframes cb-open{0%,15%,100%{transform:translateX(0)}35%,80%{transform:translateX(-2px)}}
+.cb-read7 .cb-bm{animation:cb-beam 1.6s ease-in-out infinite alternate}.cb-read7 .cb-ey{animation:cb-down 1.6s ease-in-out infinite alternate}
+@keyframes cb-beam{to{transform:translateY(10px)}}
+.cb-read8 .cb-pin{animation:cb-pin 2.4s ease-in infinite}.cb-read8 .cb-ey{transform:translate(-1px,1px)}
+@keyframes cb-pin{0%{transform:translateY(-6px);opacity:0}30%{opacity:1}50%,90%{transform:translateY(0);opacity:1}100%{transform:translateY(0);opacity:0}}
+.cb-test4 .cb-th{transform-origin:50% 100%;animation:cb-coat 3s ease-in-out infinite}.cb-test4 .cb-ey{transform:translateX(-1px)}
+.cb-test5 .cb-bal{transform-origin:50% 0;animation:cb-sw 2s ease-in-out infinite}.cb-test5 .cb-ey{animation:cb-look 2s ease-in-out infinite}
+.cb-test6 .cb-pk{animation:cb-poke 1.2s ease-in-out infinite}.cb-test6 .cb-jl{transform-origin:50% 100%;animation:cb-wob 1.2s ease-in-out infinite}
+@keyframes cb-poke{0%,100%{transform:translateX(0)}40%{transform:translateX(-2px)}}
+@keyframes cb-wob{0%,35%,100%{transform:scale(1,1)}45%{transform:scale(.88,1.1)}60%{transform:scale(1.08,.92)}75%{transform:scale(.97,1.03)}}
+.cb-test7 .cb-lt{animation:cb-glow 1.4s ease-in-out infinite}.cb-test7 .cb-all{animation:cb-lean 3s ease-in-out infinite}.cb-test7 .cb-ey{transform:translate(-1px,-1px)}
+@keyframes cb-lean{0%,100%{transform:translateX(0)}40%,70%{transform:translateX(-2px)}}
+.cb-test8 .cb-pb{transform-origin:0 50%;animation:cb-fill 4s ease-in-out infinite}.cb-test8 .cb-ar{animation:cb-arm 1s ease-in-out infinite}.cb-test8 .cb-ey{transform:translate(-1px,1px)}
+.cb-long4 .cb-pr{transform-origin:50% 100%;animation:cb-fan .4s ease-in-out infinite}.cb-long4 .cb-dp{animation:cb-drip 1.3s ease-in infinite}
+@keyframes cb-fan{50%{transform:rotate(-25deg)}}
+.cb-long5 .cb-sn{transform-origin:0 50%;animation:cb-bite 3s ease-in-out infinite}.cb-long5 .cb-cr{animation:cb-fall 1s ease-in infinite}.cb-long5 .cb-ey{transform:translateY(-1px)}
+@keyframes cb-bite{0%{transform:scaleX(1)}90%{transform:scaleX(.35)}100%{transform:scaleX(1)}}
+.cb-long6 .cb-mh{transform-origin:50% 100%;animation:cb-spin 1s linear infinite}.cb-long6 .cb-hh{transform-origin:0 50%;animation:cb-spin 6s linear infinite}.cb-long6 .cb-ey{transform:translate(-1px,-1px)}
+.cb-long7 .cb-bt{transform-origin:50% 100%;animation:cb-drain 5s ease-in infinite}.cb-long7 .cb-bd{animation:cb-bob 2.5s ease-in-out infinite}.cb-long7 .cb-ey{transform:translateY(1px)}
+.cb-long8 .cb-tm{animation:cb-belt .5s linear infinite}.cb-long8 .cb-bd{animation:cb-bob .5s ease-in-out infinite}.cb-long8 .cb-pr{animation:cb-drip 1s ease-in infinite}
+.cb-long8 .cb-la{animation:cb-st .25s ease-in-out infinite}.cb-long8 .cb-lb{animation:cb-st .25s ease-in-out infinite -.12s}@keyframes cb-belt{to{transform:translateX(-8px)}}
+.cb-build1 .cb-wg2{animation:cb-glow .4s ease-in-out infinite}.cb-build1 .cb-sk1{animation:cb-rise .6s ease-out infinite}
+.cb-build1 .cb-sk2{animation:cb-rise .6s ease-out infinite -.2s}.cb-build1 .cb-sk3{animation:cb-rise .6s ease-out infinite -.4s}
+.cb-saw1 .cb-dl{animation:cb-jit .15s ease-in-out infinite}.cb-saw1 .cb-ds{animation:cb-fall .8s ease-in infinite}.cb-saw1 .cb-ey{transform:translateX(-1px)}
+.cb-type1 .cb-pc3{animation:cb-write 3s ease-in-out infinite}.cb-type1 .cb-ey{transform:translate(-1px,1px)}
+.cb-type1 .cb-p1{animation:cb-b1 3s linear infinite}.cb-type1 .cb-p2{animation:cb-b2 3s linear infinite}.cb-type1 .cb-p3{animation:cb-b3 3s linear infinite}
+@keyframes cb-write{0%,100%{transform:translate(0,0)}33%{transform:translate(-1px,3px)}66%{transform:translate(0,5px)}}
+.cb-paint1 .cb-brm{transform-origin:50% 0;animation:cb-brush 1s ease-in-out infinite}.cb-paint1 .cb-pf1{animation:cb-puff 1s ease-out infinite}.cb-paint1 .cb-pf2{animation:cb-puff 1s ease-out infinite -.5s}
+@keyframes cb-brush{50%{transform:rotate(14deg)}}@keyframes cb-puff{0%{transform:translate(0,0);opacity:.9}100%{transform:translate(-3px,-3px);opacity:0}}
+.cb-gear1 .cb-cab{transform-origin:50% 0;animation:cb-cable 3s ease-in-out infinite}.cb-gear1 .cb-blk{animation:cb-hoist 3s ease-in-out infinite}
+.cb-gear1 .cb-ey{transform:translate(-1px,-1px)}.cb-gear1 .cb-ar{animation:cb-arm 3s ease-in-out infinite}
+@keyframes cb-cable{0%,100%{transform:scaleY(1)}50%{transform:scaleY(3)}}@keyframes cb-hoist{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){.cb *{animation:none!important}}
 </style>`
 
@@ -303,8 +349,86 @@ const TAKE: Record<string, [string, string?, number?]> = {
   comp1: ['', r(-6, 16, 9, 8, B) + r(-6, 19, 9, 1, '#5A3418') + r(-4, 14, 3, 2, PINK) + g('cb-sl', r(-6, 13, 9, 3, '#8A5A30') + r(-3, 11, 2, 2, G))],
   comp2: ['', g('cb-stk', r(-5, 6, 8, 18, WH) + r(-5, 9, 8, 1, LG) + r(-5, 13, 8, 1, LG) + r(-5, 17, 8, 1, LG) + r(-5, 21, 8, 1, LG))],
   comp3: ['', r(-6, 4, 1, 22, G) + r(2, 4, 1, 22, G) + r(-6, 3, 9, 2, G) + g('cb-bx', r(-5, 16, 7, 10, B)) + g('cb-pl', r(-5, 6, 7, 2, LG) + r(-2, 5, 1, 1, G))],
+  think4: ['', r(-6, 24, 2, 2, WH) + r(-4, 24, 2, 2, DK) + r(-2, 24, 2, 2, WH) + r(0, 24, 2, 2, DK)
+    + g('cb-pn', r(-5, 17, 2, 2, LG) + r(-5, 19, 2, 3, LG) + r(-6, 22, 4, 2, LG))],
+  think5: [r(13, 2, 4, 4, G) + r(14, 0, 2, 2, G) + r(14, 6, 2, 2, G) + r(11, 3, 2, 2, G) + r(17, 3, 2, 2, G) + r(14, 3, 2, 2, I)],
+  think6: ['', r(-6, 5, 10, 10, '#3B4A3F') + r(-6, 15, 10, 1, WOOD) + r(-5, 16, 1, 10, WOOD) + r(2, 16, 1, 10, WOOD)
+    + g('cb-c1', r(-5, 7, 4, 1, WH)) + g('cb-c2', r(-4, 10, 6, 1, WH)) + g('cb-c3', r(-5, 12, 3, 1, Y))],
+  think7: ['', r(-6, 14, 4, 6, BLU) + r(-2, 16, 1, 2, BLU) + g('cb-pz', r(-1, 14, 4, 2, Y) + r(0, 16, 3, 2, Y) + r(-1, 18, 4, 2, Y))],
+  think8: [g('cb-x1', r(13, 1, 4, 1, DIM) + r(17, 2, 1, 2, DIM) + r(15, 4, 2, 1, DIM) + r(15, 5, 1, 2, DIM) + r(15, 8, 1, 1, DIM))
+    + g('cb-x2', r(14, 0, 2, 6, Y) + r(14, 7, 2, 2, Y))],
+  read4: ['', g('cb-np', r(-6, 9, 10, 11, CREAM) + r(-5, 10, 8, 2, G) + r(-5, 13, 3, 3, LG) + r(-1, 13, 3, 1, G) + r(-1, 15, 3, 1, G) + r(-5, 17, 8, 1, G))],
+  read5: [r(25, 7, 3, 3, G) + r(27, 5, 3, 3, LG) + r(29, 3, 3, 2, G), '', 10],
+  read6: ['', g('cb-cd', r(-5, 7, 5, 3, WH)) + r(-6, 10, 8, 16, B) + r(-6, 17, 8, 1, '#5A3418') + g('cb-dr', r(-6, 11, 8, 5, '#8A5A30') + r(-3, 13, 2, 1, Y))],
+  read7: ['', r(-5, 9, 7, 11, WH) + r(-4, 11, 5, 1, G) + r(-4, 13, 4, 1, G) + r(-4, 15, 5, 1, G) + r(-4, 17, 3, 1, G)
+    + g('cb-bm', r(-6, 9, 9, 1, 'rgba(29,158,117,.8)'))],
+  read8: ['', r(-6, 14, 10, 9, CREAM) + r(-5, 16, 2, 1, BLU) + r(-3, 17, 3, 1, BLU) + r(0, 18, 3, 1, BLU) + r(-6, 21, 10, 2, '#9CC08A')
+    + g('cb-pin', r(-2, 8, 3, 3, RED) + r(-1, 11, 1, 3, G))],
+  test4: ['', r(-3, 6, 3, 15, GLASS) + r(-4, 20, 5, 5, RED) + g('cb-th', r(-2, 8, 1, 13, RED)) + r(1, 9, 1, 1, G) + r(1, 12, 1, 1, G) + r(1, 15, 1, 1, G)],
+  test5: ['', r(-2, 10, 1, 14, G) + r(-5, 24, 7, 2, G)
+    + g('cb-bal', r(-6, 9, 9, 1, G) + r(-5, 10, 1, 3, LG) + r(1, 10, 1, 3, LG) + r(-6, 13, 3, 1, LG) + r(0, 13, 3, 1, LG) + r(-6, 12, 2, 1, Y) + r(1, 12, 1, 1, GRN))],
+  test6: ['', g('cb-jl', r(-6, 17, 7, 9, '#7FC8A9') + r(-5, 18, 2, 2, 'rgba(255,255,255,.5)')) + g('cb-pk', r(1, 20, 4, 1, B))],
+  test7: ['', r(-6, 24, 8, 2, G) + r(0, 12, 2, 12, G) + r(-5, 19, 6, 1, DK) + r(-4, 18, 4, 1, SKY) + r(-4, 9, 3, 7, LG) + r(-4, 7, 3, 2, G)
+    + r(-3, 16, 1, 2, G) + g('cb-lt', r(-3, 22, 2, 1, Y))],
+  test8: ['', r(-6, 20, 10, 4, G) + r(-5, 21, 8, 2, DK) + g('cb-pb', r(-5, 21, 8, 2, GRN))],
+  long4: [r(26, 9, 1, 5, B) + r(24, 4, 5, 5, PINK) + r(25, 5, 3, 3, '#E88AAB'), g('cb-dp', r(5, 8, 1, 1, SKY) + r(4, 9, 3, 2, SKY)), 10],
+  long5: [g('cb-sn', r(12, 16, 6, 1, '#E8B04A') + r(12, 17, 6, 1, '#7BA05B') + r(12, 18, 6, 1, RED) + r(12, 19, 6, 1, '#E8B04A'))
+    + g('cb-cr', r(14, 21, 1, 1, '#E8B04A') + r(16, 22, 1, 1, '#E8B04A'))],
+  long6: ['', r(-5, 4, 8, 8, WH) + r(-6, 5, 1, 6, G) + r(3, 5, 1, 6, G) + r(-5, 3, 8, 1, G) + r(-5, 12, 8, 1, G)
+    + g('cb-mh', r(-2, 5, 1, 3, I)) + g('cb-hh', r(-2, 8, 3, 1, I))],
+  long7: ['', r(-5, 9, 7, 15, G) + r(-4, 10, 5, 13, DK) + r(-3, 8, 3, 1, G) + g('cb-bt', r(-4, 10, 5, 13, GRN))],
+  long8: [r(5, 8, 1, 1, SKY) + r(4, 9, 3, 2, SKY), r(-5, 13, 1, 13, G) + r(-5, 13, 6, 1, G) + r(-6, 26, 38, 1, G)
+    + g('cb-tm', r(-6, 26, 2, 1, LG) + r(2, 26, 2, 1, LG) + r(10, 26, 2, 1, LG) + r(18, 26, 2, 1, LG) + r(26, 26, 2, 1, LG) + r(34, 26, 2, 1, LG))],
+  build1: [r(8, 11, 14, 3, DK) + r(8, 11, 14, 1, '#5F636B'), r(-6, 15, 7, 11, G) + r(-6, 20, 7, 1, '#5F636B') + g('cb-wg2', r(-2, 19, 3, 1, ORG))
+    + r(1, 17, 4, 2, DK) + r(0, 17, 1, 1, LG) + g('cb-sk1', r(-1, 15, 1, 1, Y)) + g('cb-sk2', r(1, 14, 1, 1, ORG)) + g('cb-sk3', r(-3, 16, 1, 1, Y))],
+  saw1: ['', r(-6, 12, 5, 14, WOOD) + r(-4, 15, 2, 2, B) + r(-4, 20, 2, 2, B)
+    + g('cb-dl', r(0, 15, 5, 3, ORG) + r(2, 18, 2, 3, DK) + r(-2, 16, 2, 1, LG) + r(-1, 16, 1, 1, G)) + g('cb-ds', r(-2, 18, 1, 1, CREAM))],
+  type1: ['', r(-6, 10, 9, 13, '#2F5E9E') + r(-6, 14, 9, 1, '#4A78B8') + r(-6, 18, 9, 1, '#4A78B8') + r(-3, 10, 1, 13, '#4A78B8')
+    + g('cb-p1', r(-5, 12, 6, 1, WH)) + g('cb-p2', r(-5, 12, 1, 8, WH)) + g('cb-p3', r(-5, 19, 6, 1, WH)) + g('cb-pc3', r(2, 13, 1, 5, Y) + r(2, 18, 1, 1, I))],
+  paint1: ['', g('cb-brm', r(1, 6, 1, 15, B) + r(-1, 21, 5, 4, WOOD) + r(-1, 21, 5, 1, '#8A5A30')) + g('cb-pf1', r(-4, 24, 1, 1, LG)) + g('cb-pf2', r(-6, 23, 2, 1, LG))],
+  gear1: ['', r(-5, 2, 2, 24, Y) + r(-5, 6, 2, 1, '#B8941F') + r(-5, 12, 2, 1, '#B8941F') + r(-5, 18, 2, 1, '#B8941F') + r(-6, 2, 10, 2, Y)
+    + g('cb-cab', r(2, 4, 1, 4, G)) + g('cb-blk', r(1, 8, 3, 1, G) + r(0, 9, 5, 4, BR))],
 }
 const WALKS: ReadonlySet<string> = new Set(['inst', 'codex', 'think3', 'done2'])
+
+// A take is a 14 s scene, as long as it holds, not one short loop (Praj, 16 Oct): the crab works, breaks for a beat
+// at ~5 s with an emote over its shoulder, works on, and takes another beat at ~10 s. The beats move the whole crab
+// (its tools stay put); each take draws its own pair from its name. The dozing crab sleeps through.
+const BEATS: Record<string, [number, string][]> = {
+  hop: [[.2, 'translateY(-3px)'], [.4, 'none'], [.6, 'translateY(-3px)'], [.8, 'none']],
+  admire: [[.25, 'translateX(2px) rotate(4deg)'], [.75, 'translateX(2px) rotate(4deg)']],
+  turn: [[.15, 'scaleX(-1)'], [.8, 'scaleX(-1)']],
+  stretch: [[.3, 'scale(1.06,.88)'], [.6, 'scale(.96,1.1)']],
+  shimmy: [[.15, 'translateX(-1px)'], [.3, 'translateX(1px)'], [.45, 'translateX(-1px)'], [.6, 'translateX(1px)'], [.75, 'none']],
+  tilt: [[.25, 'rotate(-7deg)'], [.75, 'rotate(-7deg)']],
+}
+const EMOTE = {
+  bang: r(4, 1, 2, 5, Y) + r(4, 7, 2, 2, Y),
+  note: r(5, 2, 1, 4, WH) + r(3, 5, 3, 2, WH) + r(6, 2, 2, 1, WH),
+  spark: r(5, 2, 1, 5, Y) + r(3, 4, 5, 1, Y),
+  ask: r(4, 2, 3, 1, DIM) + r(7, 3, 1, 2, DIM) + r(5, 5, 2, 1, DIM) + r(5, 6, 1, 1, DIM) + r(5, 8, 1, 1, DIM),
+  love: r(3, 3, 2, 2, PINK) + r(6, 3, 2, 2, PINK) + r(3, 5, 5, 2, PINK) + r(4, 7, 3, 1, PINK) + r(5, 8, 1, 1, PINK),
+  sweat: r(5, 3, 1, 1, SKY) + r(4, 4, 3, 2, SKY),
+}
+const GLUM: ReadonlySet<Mood> = new Set(['testf', 'debug', 'dizzy', 'long', 'ask'])
+const WINDOW = [[34, 44], [72, 82]] as const
+function scene(mood: Mood, key: string): { css: string, wrap: (body: string) => string } {
+  if (mood === 'doze') return { css: '', wrap: b => b }
+  // ponytail: string hash plus one avalanche step; neighbours (think4, think5) otherwise shared their high bits.
+  let h = [...key].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7)
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0; h = (h ^ (h >>> 16)) >>> 0
+  const names = Object.keys(BEATS), faces = (GLUM.has(mood) ? ['sweat', 'ask', 'bang'] : Object.keys(EMOTE)) as (keyof typeof EMOTE)[]
+  const pick = [names[h % 6], names[(h % 6 + 1 + (h >>> 4) % 5) % 6]]
+  const face = [faces[(h >>> 8) % faces.length], faces[((h >>> 8) + 1) % faces.length]]
+  let css = ''
+  WINDOW.forEach(([a, b], i) => {
+    const at = (f: number) => +(a + f * (b - a)).toFixed(1)
+    css += `.cb-act${i + 1}{transform-origin:50% 100%;animation:cb-k-${pick[i]}-${i + 1} 14s ease-in-out infinite}`
+      + `@keyframes cb-k-${pick[i]}-${i + 1}{0%,${a}%,${b}%,100%{transform:none}${BEATS[pick[i]].map(([f, tf]) => `${at(f)}%{transform:${tf}}`).join('')}}`
+      + `.cb-em${i + 1}{opacity:0;animation:cb-e${i + 1} 14s ease-in-out infinite}@keyframes cb-e${i + 1}{0%,${a}%,${b}%,100%{opacity:0}${a + 2}%,${b - 2}%{opacity:1}}`
+  })
+  return { css, wrap: b => `${g('cb-act1', g('cb-act2', b))}${g('cb-em1', EMOTE[face[0]])}${g('cb-em2', EMOTE[face[1]])}` }
+}
 
 /** One standalone SVG of the crab acting out take `t` of `mood` (0 is the mood's first look). */
 export function crabArt(mood: Mood, t = 0): string {
@@ -313,10 +437,12 @@ export function crabArt(mood: Mood, t = 0): string {
   const eyes = mood === 'doze' ? r(9, 14, 2, 1, I) + r(19, 14, 2, 1, I) : r(9, 12, 2, 2, I) + r(19, 12, 2, 2, I)
   const mouth = key === 'idle' ? g('cb-mo', r(13, 17, 4, 3, I)) : ''
   const z = key === 'doze' ? '<text class="cb-z" x="24" y="8">z</text>' : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="30" viewBox="-6 -2 38 30" shape-rendering="crispEdges">${CSS}`
-    + `<g class="cb cb-${key}${WALKS.has(key) ? ' cb-walk' : ''}">${beside}<g class="cb-all"><g class="cb-bd">${r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O)}`
+  const sc = scene(mood, key)
+  // The scene's beats join the one style block, ahead of the reduced-motion rule that stills them too.
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="30" viewBox="-6 -2 38 30" shape-rendering="crispEdges">${CSS.replace('@media', `${sc.css}@media`)}`
+    + `<g class="cb cb-${key}${WALKS.has(key) ? ' cb-walk' : ''}">${beside}${sc.wrap(`<g class="cb-all"><g class="cb-bd">${r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O)}`
     + `${g('cb-ey', eyes)}${mouth}${g('cb-ar', r(23, armY, 4, 4, O))}${g('cb-pr', prop)}</g>`
-    + `${g('cb-la', r(7, 22, 2, 4, O) + r(17, 22, 2, 4, O))}${g('cb-lb', r(11, 22, 2, 4, O) + r(21, 22, 2, 4, O))}</g>${z}</g></svg>`
+    + `${g('cb-la', r(7, 22, 2, 4, O) + r(17, 22, 2, 4, O))}${g('cb-lb', r(11, 22, 2, 4, O) + r(21, 22, 2, 4, O))}</g>`)}${z}</g></svg>`
 }
 
 // The stage (Praj, 12 Oct): the right half of the band, the crab 52×41 inside it. The markup is width="100%" with no
@@ -418,7 +544,7 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
     })
     fxCss += '.st-fp{transform-box:view-box;opacity:0;animation:st-fp 2.2s ease-in both}@keyframes st-fp{0%{opacity:0}5%{opacity:.6}100%{opacity:0}}'
   }
-  if (mood === 'paint') {
+  if (mood === 'paint' && !t) {
     // The stripe behind it, each mark laid as the crab passes.
     trail(40, to, to + .4, d, roam![0]).forEach(({ f, t }) => fx += `<g class="st-sp" style="transform:${x(f)};animation-delay:${t.toFixed(2)}s">${r(4, 37, 14, 2.5, BLU)}</g>`)
     fxCss += '.st-sp{transform-box:view-box;animation:st-sp .3s ease-out both}@keyframes st-sp{0%{opacity:0}100%{opacity:1}}'
@@ -438,7 +564,7 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   }
   // Build lays a wall leftward, course by course, riding with the crab.
   let wall = ''
-  if (mood === 'build') {
+  if (mood === 'build' && !t) {
     const bricks = [...Array.from({ length: 10 }, (_, k) => [-2 - (k + 1) * 9, 34.5]), ...Array.from({ length: 9 }, (_, k) => [-6.5 - (k + 1) * 9, 30])]
     wall = g('st-fx', bricks.map(([bx, by], j) => `<rect x="${bx}" y="${by}" width="8" height="4" fill="${j % 2 ? BR2 : BR}" class="st-bk" style="animation-delay:${(d + .3 + j * .45).toFixed(2)}s"/>`).join(''))
     fxCss += '.st-bk{animation:st-bk .25s ease-out both}@keyframes st-bk{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:none}}'

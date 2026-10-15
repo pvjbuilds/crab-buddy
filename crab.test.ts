@@ -77,6 +77,18 @@ test('a long build cycles five scenes, 14 s each: hammer, saw, laptop, paint, ge
   expect([0, 1, 2, 3, 4, 5].map(k => shown(c, T0 + S + k * 14 * S))).toEqual(['build', 'saw', 'type', 'paint', 'gear', 'build'])
 })
 
+test('the second lap of a build plays five new scenes: weld, drill, blueprint, sweep, crane (Praj, 16 Oct)', () => {
+  const c = run([0, { kind: 'turnStart' }], [S, { kind: 'tool', mood: 'build' }])
+  const at = (k: number) => { const now = T0 + S + k * 14 * S, m = shown(c, now); return `${m}${take(c, now, m) || ''}` }
+  expect([...Array(11).keys()].map(at)).toEqual(['build', 'saw', 'type', 'paint', 'gear', 'build1', 'saw1', 'type1', 'paint1', 'gear1', 'build'])
+  for (const m of BUILDS) {
+    expect(takes(m)).toBe(2)
+    expect(crabArt(m, 1)).not.toBe(crabArt(m, 0))
+    expect(crabArt(m, 1)).toMatch(new RegExp(`class="cb cb-${m}1[" ]`))
+    expect(crabArt(m, 1)).toContain(`.cb-${m}1 `)
+  }
+})
+
 test('idle: dozes after 10 minutes; between 00:00 and 05:00 local time it is the night owl', () => {
   const c = run([0, { kind: 'turnStart' }], [S, { kind: 'turnEnd' }])
   expect(shown(c, T0 + 9 * M)).toBe('idle')
@@ -105,7 +117,8 @@ test('every mood draws its own crab, with no hole in the drawing', () => {
   })
   expect(new Set(arts).size).toBe(moods.length)
   // Each build scene draws its own set beside the crab, not just a new class name.
-  for (const m of ['saw', 'type', 'paint', 'gear'] as const) expect(crabArt(m).length).toBeGreaterThan(crabArt('think').length + 300)
+  const drawn = (a: string) => a.replace(/<style>[\s\S]*<\/style>/, '').replace(/<g class="cb-em[12]">[\s\S]*?<\/g>/g, '').length
+  for (const m of ['saw', 'type', 'paint', 'gear'] as const) expect(drawn(crabArt(m))).toBeGreaterThan(drawn(crabArt('think')) + 300)
   // The idle crab carries the three fidgets (yawn, wave, side-step) on one 30 s CSS loop.
   expect(crabArt('idle')).toContain('cb-yawn')
   expect(crabArt('idle')).toContain('cb-side')
@@ -126,26 +139,28 @@ test('every motion tweens at the screen rate; only the typing cursor blinks hard
   expect(css).toMatch(/\.cb-type \.cb-cu\{animation:cb-bl \.8s steps\(1\)/)
 })
 
-import { take, TAKES } from './hooks/crab.ts'
+import { take, takes } from './hooks/crab.ts'
 // Every mood that had one take; the build moods are already five scenes of their own.
 const ONE = ['idle', 'think', 'read', 'test', 'testp', 'testf', 'debug', 'done', 'doze', 'web', 'sub', 'codex', 'git', 'inst', 'ask', 'long', 'comp', 'dizzy', 'fixed', 'night'] as const
 
-test('four takes a mood: the first picked by the moment it began, the next every 14 s, idle ones every 42 s (Praj, 12 Oct: 40% longer)', () => {
-  expect(TAKES).toBe(4)
+test('takes a mood: nine for the busy looks, four for the rest; the first picked by the moment it began, the next every 14 s, idle ones every 42 s (Praj, 16 Oct)', () => {
+  expect(ONE.filter(m => takes(m) === 9)).toEqual(['think', 'read', 'test', 'long'])
+  expect(ONE.filter(m => takes(m) !== 9).every(m => takes(m) === 4)).toBe(true)
   const at = (ms: number) => ({ ...START, lastActive: T0 + ms })
   // Two test runs a moment apart do not open on the same take.
   expect(new Set([0, 1, 2, 3].map(ms => take(at(ms), T0 + ms, 'test'))).size).toBe(4)
-  expect([0, 13, 14, 28, 42, 56].map(s => take(at(0), T0 + s * S, 'think'))).toEqual([0, 0, 1, 2, 3, 0])
+  expect([0, 13, 14, 28, 42, 56, 126].map(s => take(at(0), T0 + s * S, 'think'))).toEqual([0, 0, 1, 2, 3, 4, 0])
+  expect([0, 14, 42, 56].map(s => take(at(0), T0 + s * S, 'web'))).toEqual([0, 1, 3, 0])
   // Idle, doze and night owl hold a take three times as long.
   expect([0, 41, 42, 84].map(s => take(at(0), T0 + s * S, 'idle'))).toEqual([0, 0, 1, 2])
   expect(take(at(1), T0 + 50 * S, 'saw')).toBe(0)
 })
 
-test('every mood draws four different takes, each with its own motion (Praj, 12 Oct)', () => {
+test('every mood draws all its takes, each different, with its own motion (Praj, 12 Oct; nine for the busy looks, 16 Oct)', () => {
   for (const m of ONE) {
-    const arts = [0, 1, 2, 3].map(t => crabArt(m, t))
-    expect(new Set(arts).size).toBe(4)
-    for (const t of [1, 2, 3]) {
+    const arts = [...Array(takes(m)).keys()].map(t => crabArt(m, t))
+    expect([m, new Set(arts).size]).toEqual([m, takes(m)])
+    for (const t of [...Array(takes(m)).keys()].slice(1)) {
       expect(arts[t]).toMatch(new RegExp(`class="cb cb-${m}${t}[" ]`))
       expect(arts[t]).toContain(`.cb-${m}${t} `)
       expect(arts[t]).not.toContain('undefined')
@@ -160,17 +175,20 @@ test('the hover labels say what happens with certainty: no "or" (Praj, 12 Oct)',
 })
 
 test('the art is well-formed XML: no stray < inside the style, which the SVG parser reads as a tag', () => {
-  for (const m of ONE) for (const t of [0, 1, 2, 3]) {
+  for (const m of [...ONE, ...BUILDS]) for (const t of [...Array(takes(m)).keys()]) {
     const css = crabArt(m, t).match(/<style>([\s\S]*)<\/style>/)?.[1] ?? ''
     expect(css).not.toContain('<')
   }
 })
 
 import { LINES, BUILDS } from './hooks/crab.ts'
-test('the band caption: ten one-liners a mood, all different, short, said with certainty (Praj, 12 Oct)', () => {
+// Five more lines for the looks a long task shows most, one for each new take or scene (Praj, 16 Oct).
+const BUSY = new Set<string>(['think', 'read', 'test', 'long', 'build', 'saw', 'type', 'paint', 'gear'])
+test('the band caption: ten one-liners a mood, fifteen for the busy ones, all different, short, said with certainty (Praj, 12 Oct)', () => {
   for (const m of [...ONE, ...BUILDS]) {
     const l = LINES[m]
-    expect([m, l.length, new Set(l).size]).toEqual([m, 10, 10])
+    const n = BUSY.has(m) ? 15 : 10
+    expect([m, l.length, new Set(l).size]).toEqual([m, n, n])
     for (const s of l) {
       expect(s.length <= 46 ? s : `${m}: too long: ${s}`).toBe(s)
       expect(/\bor\b/i.test(s) ? `${m}: says "or": ${s}` : s).toBe(s)
@@ -293,4 +311,18 @@ test('stage: build lays a wall, paint leaves a stripe, sub sends minis, web surf
   expect([web.includes('id="st-wave"'), web.includes('st-bob')]).toEqual([true, true])
   for (const m of MOODS) expect(stageArt(m, 0, 0)).toContain('@media (prefers-reduced-motion:reduce){.st-fx{display:none}.st-tr{animation:none}}')
   for (const m of ['idle', 'ask'] as Mood[]) expect(stageArt(m, 0, 1)).not.toMatch(/st-bk|st-sp|st-mc|st-wave|st-cf/)
+})
+
+test('every take plays as a 14 s scene: work, a beat at ~5 s, work, another beat at ~10 s, each take its own pair (Praj, 16 Oct)', () => {
+  const beats = (art: string) => [...new Set(art.match(/cb-k-[a-z]+-[12]/g) ?? [])]
+  for (const m of [...ONE, ...BUILDS].filter(m => m !== 'doze')) {
+    const art = crabArt(m, 0)
+    expect([m, beats(art).length]).toEqual([m, 2])
+    expect(art).toMatch(/\.cb-act1\{transform-origin:50% 100%;animation:cb-k-[a-z]+-1 14s ease-in-out infinite\}/)
+    const [one, two] = beats(art)
+    expect(one.slice(0, -2)).not.toBe(two.slice(0, -2))
+  }
+  // The pairs vary across a mood's takes, and the dozing crab sleeps through.
+  expect(new Set([...Array(takes('think')).keys()].map(t => beats(crabArt('think', t)).join())).size).toBeGreaterThanOrEqual(5)
+  expect(beats(crabArt('doze', 0))).toEqual([])
 })

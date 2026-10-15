@@ -34,11 +34,14 @@ Start a new session and the crab is there.
 
 ## Features
 
-- **25 moods, four takes each.** The take is picked at random, so two test runs in a row rarely
-  look the same.
+- **25 moods, up to nine takes each.** Thinking, reading, testing and long turns have nine; a long
+  build runs ten scenes before one repeats. The take is picked at random, so two test runs in a row
+  rarely look the same.
+- **Scenes, not loops.** Each take plays as a 14-second scene: the crab works, stops for a beat
+  (a hop, a stretch, a look back at its work) with a little emote, works on, then takes another.
 - **Nothing flashes.** Each look holds at least 3 seconds, then the crab jumps to whatever is
   happening now.
-- **A caption with personality.** Ten one-liners per mood ("Close, but no seaweed.", "Git it
+- **A caption with personality.** Ten to fifteen one-liners per mood ("Close, but no seaweed.", "Git it
   done.") scroll down like a terminal, newest on top. Point at the crab to see the plain meaning.
 - **A stage, not a corner.** In the desktop app the crab owns the right half of the band. It
   walks to a spot for each mood, wanders while idle, scuttles home when done and curls up at the
@@ -53,18 +56,18 @@ Start a new session and the crab is there.
 
 | What Claude is doing | What the crab does |
 |---|---|
-| Thinking | Sways and looks around |
-| Reading or searching files | Magnifier, book, scroll or reading glasses |
-| Editing files or running commands | Builds a wall, saws, types, paints, turns gears (a new scene every 10 s) |
-| Running tests | Flask, checklist or stopwatch; cheers on a pass, slumps on a fail |
+| Thinking | Sways, plays chess, sketches on a chalkboard, fits a puzzle, gets an idea |
+| Reading or searching files | Magnifier, book, newspaper, telescope, file drawer, scanner, map |
+| Editing files or running commands | Builds a wall, saws, types, paints, turns gears; then welds, drills, drafts a blueprint, sweeps up, runs a crane (a new scene every 14 s) |
+| Running tests | Flask, checklist, stopwatch, thermometer, scales, microscope, a progress bar; cheers on a pass, slumps on a fail |
 | A command failed | An exclamation mark; three failures in a row and it gets dizzy |
 | Searching the web | Globe, surfboard or wifi waves |
 | A subagent is working | A mini crab carries a box |
 | Committing or pushing with git | Rocket, stamp or a commit graph |
 | Installing a package | A parcel drops in |
 | Waiting for your reply | A question mark |
-| A turn past 5 minutes | Coffee, an hourglass, wiping its brow |
-| Compacting the conversation | Squashes flat |
+| A turn past 5 minutes | Coffee, an hourglass, a fan, a snack, a racing clock, a draining battery, a treadmill |
+| Compacting the conversation | Squashes flat, only once a compaction really runs |
 | Done | Jumps, dances or bows |
 | Idle, then dozing after 10 minutes | Fidgets, then sleeps; between midnight and 5 am it's a night owl |
 
