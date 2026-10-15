@@ -8,7 +8,7 @@
     {
       "name": "crab-buddy",
       "source": "./",
-      "description": "An animated Claude crab above the prompt that acts out what Claude is doing. 0 tokens."
+      "description": "An animated pixel-art Claude crab above the prompt that acts out what Claude is doing: 25 moods, 110 takes, desktop and terminal. 0 tokens."
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "crab-buddy",
   "version": "0.10.0",
-  "description": "The orange Claude crab gets the right half of the band above the prompt as a stage and acts out what is happening: reading, building (ten scenes), testing, debugging, web, subagents, git, installs, idle fidgets, dozing and night owl. Each look holds at least 3 s, so nothing flashes; a caption of one-liners (ten to fifteen a mood) scrolls like a terminal beside it. Desktop: it walks to a spot per mood, wanders when idle, up to nine takes per mood, each a 14 s scene with beats in smooth CSS animation; terminal: the welcome-screen crab in block characters. Follows the app's light or dark theme live. 0 tokens.",
+  "description": "An animated pixel-art Claude crab above your prompt that acts out what Claude Code is doing: thinking, reading, building (ten scenes), testing, debugging, web, subagents, git, installs, long turns, compacting, idle, dozing and night owl. 25 moods, 110 takes, each a 14 s scene with beats and emotes; it walks a stage in the desktop app and draws in block characters in the terminal. A caption of one-liners scrolls beside it; each look holds 8 s, so nothing flashes. Light and dark themes, reduce-motion aware. 0 tokens.",
   "author": {
     "name": "Praj",
     "url": "https://github.com/pvjbuilds"
@@ -12,12 +12,14 @@
   "license": "MIT",
   "keywords": [
     "claude-code",
+    "claude-code-plugin",
     "crab",
     "mascot",
     "animation",
     "pixel-art",
     "terminal",
     "desktop-pet",
+    "virtual-pet",
     "status-line",
     "fun"
   ]

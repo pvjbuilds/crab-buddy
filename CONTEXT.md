@@ -88,9 +88,13 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 - An SVG `<style>` is parsed as XML: a `<` even inside a CSS comment drops every later rule.
   A test guards it.
 
+- 2026-10-16: The glossary (`docs/glossary.html`) is the vocabulary for asking for changes: band, caption, stage, station,
+  mood, look, take, scene, work loop, beat, emote, prop, set, stage extra, build scene, lap, dwell, cut, hold. Use its
+  words in code comments, tests and commits; add a term there when a new part is named.
+
 ## Current state
 
-2026-10-16: v0.10.0 (compacting only when real; nine takes for busy looks, ten build scenes; 14 s scenes with beats), 46 tests pass. README shots via `bun docs/shots/make.ts`. Not yet seen live.
+2026-10-16: v0.10.0 (compacting only when real; nine takes for busy looks, ten build scenes; 14 s scenes with beats), 46 tests pass. README rewritten for reach (badges, why, FAQ, glossary, every-take sheet `docs/takes.png`, social card `docs/social.png`); `docs/glossary.html` (from `bun docs/glossary.ts`, served on GitHub Pages) is the shared vocabulary for change requests. `bun docs/shots/make.ts` rebuilds all images and the glossary.
 2026-10-14: v0.9.5 (two caption lines always, newest in full text colour), 43 tests pass; seen live in dark and light (02:10-02:12).
 2026-10-12: v0.9.4 (the "?" follows real permission dialogs only), 43 tests pass. v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks); extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop
 app as a renamed dev mod: band fill matched the transcript in dark (#151515) and light (#fcfcfb); the crab
