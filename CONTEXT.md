@@ -78,9 +78,11 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
   `.st-fx`, hidden for reduced motion. Calmer pacing (Praj, 12:55, "feels like ocd"): a take or build scene holds
   14 s (was 10), idle/doze/night 42 s (was 30); walks and wanders run at half speed (whole stage 4.8 s). The trip and
   the dizzy wobble keep their pace. A take change walks idle home, so it reaches only its first wander stop.
-- 2026-10-21 (0.11.0, after Praj saw "a dashed line, not water"): web's stage extras go by take. Surf (web2) rides
-  a 12 px rolling sea that scrolls left, 6 px up, in front of a breaking curl with spray; antenna (web) sends three
-  rings; globe (web1) turns a big globe on a stand, which stays (still) under reduced motion. The old strip drew
+- 2026-10-21 (0.11.0, after Praj saw "a dashed line, not water"): web's stage extras go by take. Surf (web2) is one
+  sea (Praj, live: a curl over a tiled swell read as two waves): a low band rolling left, and a set of three swells
+  that rise ahead of the crab, each bigger, lift it as they pass under, break white and sink behind; the crab holds
+  its station and tilts with the slope (its own narrow-band rock is off on the stage); antenna (web) sends three
+  rings; globe (web1) is a 24 px globe with Asia and India on it, rocking, which stays (still) under reduced motion. The old strip drew
   under every take, and its pattern tiles were not anchored to the strip, so a solid line sat over foam dashes. The
   stage drops the crab's own small globe and wave (`WEB_GLOBE`, `WEB_WAVE`); the narrow band keeps them. Fixed in
   the same release (audit with Astra): takes ran 8 s after the first (the take clock restarted on each change; the
@@ -103,7 +105,7 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
 
 ## Current state
 
-2026-10-21: v0.11.0 (web by take, real surf; 8 s take clock, Bash reads, reduced motion, doubled minis fixed), 47 tests pass; rendered in Chromium dark and light, with and without reduced motion. Not yet seen live.
+2026-10-21: v0.11.0 (web by take, real surf; 8 s take clock, Bash reads, reduced motion, doubled minis fixed), 47 tests pass; rendered in Chromium dark and light, with and without reduced motion; surf and globe seen live by Praj (21:50).
 2026-10-16: v0.10.0 (compacting only when real; nine takes for busy looks, ten build scenes; 14 s scenes with beats), 46 tests pass. README rewritten for reach (badges, why, FAQ, glossary, every-take sheet `docs/takes.png`, social card `docs/social.png`); `docs/glossary.html` (from `bun docs/glossary.ts`, served on GitHub Pages) is the shared vocabulary for change requests. `bun docs/shots/make.ts` rebuilds all images and the glossary.
 2026-10-14: v0.9.5 (two caption lines always, newest in full text colour), 43 tests pass; seen live in dark and light (02:10-02:12).
 2026-10-12: v0.9.4 (the "?" follows real permission dialogs only), 43 tests pass. v0.9.3 (stage extras: trip, confetti, footprints, wall, paint stripe, mini crabs, wave; calmer pacing: 8 s look hold, 14 s takes, half-speed walks); extras seen live in dark (13:01-13:05), all in Chromium dark and light. v0.9.2 (the crab keeps walking on hover, theme-ink label rides with it and fades out); seen live in dark and light. v0.9.1 (no snap-back, readable hover label). v0.9.0 band confirmed light on Windows (Praj's photos). Seen live in the maintainer's Mac desktop

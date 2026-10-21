@@ -20,7 +20,7 @@ const CUT: ReadonlySet<Mood> = new Set(['debug', 'dizzy', 'testf', 'testp', 'fix
 // Where the crab stands now, mid-walk or mid-wander: a new look walks on from here, never from the old spot,
 // which snapped the crab back across the stage (Praj, 12 Oct). The first look is timed from the session's start.
 let began = 0
-const here = (x: Look, now: number) => (x.at || began) > 0 ? where(x.mood, x.from ?? STATION[x.mood], (now - (x.at || began)) / 1000) : STATION[x.mood]
+const here = (x: Look, now: number) => (x.at || began) > 0 ? where(x.mood, x.from ?? STATION[x.mood], (now - (x.at || began)) / 1000, x.take) : STATION[x.mood]
 // Every plugin's status line, by plugin, drawn in the crab's bar instead of the footer's "+1" overflow.
 const lines = atom({ plugin: 'crab-buddy', key: 'lines' } as const, {} as Record<string, string>)
 

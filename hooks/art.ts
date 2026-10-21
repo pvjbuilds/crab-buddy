@@ -494,9 +494,12 @@ function uAt(p: number) {
 const trail = (n: number, f0: number, f1: number, start: number, dur: number) =>
   Array.from({ length: n }, (_, k) => ({ f: f0 + (f1 - f0) * (k + .5) / n, t: start + dur * uAt((k + .5) / n) }))
 
+// Surfing, the crab holds its spot on the curl while the sea runs past (Praj, 21 Oct: a wander dragged the curl away).
+const roamOf = (mood: Mood, t: number) => mood === 'web' && t === 2 ? undefined : ROAM[mood]
+
 /** Where the crab stands (0 to 1) `s` seconds into a look of `mood` that walked in from `from`: the walk, then the wander. */
-export function where(mood: Mood, from: number, s: number): number {
-  const to = STATION[mood], d = walkFor(from, to), roam = ROAM[mood]
+export function where(mood: Mood, from: number, s: number, t = 0): number {
+  const to = STATION[mood], d = walkFor(from, to), roam = roamOf(mood, t)
   if (s < d) return from + (to - from) * ease(s / d)
   if (!roam) return to
   if (roam[2] && s - d >= roam[0]) return to + roam[1][roam[1].length - 1][1]
@@ -512,58 +515,102 @@ const em = (c: string) => /[ijl.,:;'|!I]/.test(c) ? .23 : /[ftr ]/.test(c) ? .3 
 
 // Web on the stage (21 Oct: one thin strip under every take read as a dashed line, not water). In stage px, the
 // crab's box 52×41 at the origin; the pieces that ride with the crab are drawn in its box.
-const DEEP = '#2A6DB8', SEA_P = 32, SEA_H = 12
-// The surf take's sea: a sine swell 32 px long, foam on the crests, a deep band below. The pattern starts where the
-// strip does, so the crests sit on top: unanchored tiles drew a solid line over dashes of foam.
+const DEEP = '#2A6DB8', SEA_P = 16, SEA_Y = 35, SURF = 4.8
+// The surf take's water, one sea (Praj, 21 Oct, live: a curl over a tiled swell read as two waves). A low band rolls
+// left as the crab rides right, its tiles anchored to the band so the chop sits on top.
 const SEA = (() => {
   let tile = ''
   for (let x = 0; x < SEA_P; x++) {
-    const top = Math.round(5.5 - 3.5 * Math.sin(2 * Math.PI * x / SEA_P))
-    tile += r(x, top, 1, SEA_H - top, BLU) + r(x, top, 1, 1, top <= 3 ? WH : SKY) + r(x, SEA_H - 3, 1, 3, DEEP)
+    const top = x > 3 && x < 12 ? 0 : 1
+    tile += r(x, top, 1, 4 - top, BLU) + r(x, top, 1, 1, x === 7 ? WH : SKY) + r(x, 4, 1, 2, DEEP)
   }
-  tile += r(6, 3, 1, 1, WH) + r(11, 3, 1, 1, WH) + r(20, 9, 3, 1, SKY) + r(27, 8, 2, 1, SKY)
-  return `<defs><pattern id="st-sea" y="${41 - SEA_H}" width="${SEA_P}" height="${SEA_H}" patternUnits="userSpaceOnUse">${tile}</pattern></defs>`
-    + `<g class="st-sea"><rect x="0" y="${41 - SEA_H}" width="200%" height="${SEA_H}" fill="url(#st-sea)"/></g>`
+  return `<defs><pattern id="st-sea" y="${SEA_Y}" width="${SEA_P}" height="6" patternUnits="userSpaceOnUse">${tile}</pattern></defs>`
+    + `<g class="st-sea"><rect x="0" y="${SEA_Y}" width="200%" height="6" fill="url(#st-sea)"/></g>`
 })()
-// The breaking wave behind the surfer: its back, the lip pitching over the crab's tail, the tube under it, the face
-// it rides down, and spray off the lip.
-const CURL = (() => {
-  const back = [35, 32, 29, 27, 25, 23, 22, 21, 20, 19, 19, 18, 18, 18, 18, 18, 19]
-  let c = back.map((t, k) => r(k - 22, t, 1, 41 - t, BLU) + r(k - 22, t, 1, 1, WH)).join('')
-  c += r(-5, 19, 3, 2, BLU) + r(-5, 19, 3, 1, WH) + r(-2, 20, 2, 2, BLU) + r(-2, 20, 2, 1, WH) + r(0, 21, 2, 3, WH) + r(1, 24, 1, 1, WH)
-  c += r(-5, 21, 5, 20, DEEP) + r(0, 24, 3, 17, DEEP)
-  for (let x = 3; x < 14; x++) { const t = 26 + Math.round((x - 3) * .35); c += r(x, t, 1, 41 - t, BLU) + r(x, t, 1, 1, SKY) }
-  c += r(-14, 26, 4, 1, SKY) + r(-9, 31, 3, 1, SKY) + r(-18, 33, 3, 1, SKY)
-  c += [[2, 18], [5, 20], [0, 16]].map(([x, y], k) => g(`st-spr st-spr${k}`, r(x, y, 1, 1, WH))).join('')
-  return g('st-curl', c)
+// Swells rise out of the band ahead of the crab, lift it as they pass under, break white and sink behind it, a set
+// of three each bigger than the last. In the crab's box: a swell's peak runs from 70 px ahead of the board's middle
+// to 70 px behind over SURF s, its height growing to full under the crab, holding while it breaks, then gone.
+const MID = 28, SET = [.5, .75, 1.05]
+const bell = (dx: number) => Math.abs(dx) < 20 ? 6 + 14 * (.5 + .5 * Math.cos(Math.PI * dx / 20)) : 6
+const grow = (p: number) => p < .5 ? .1 + 1.8 * p : p < .7 ? 1 : (1 - p) / .3
+const SWELL = (() => {
+  let c = '', foam = ''
+  for (let dx = -19; dx < 20; dx++) {
+    const t = 41 - Math.round(bell(dx))
+    c += r(MID + dx, t, 1, 39 - t, BLU) + r(MID + dx, 39, 1, 2, DEEP) + r(MID + dx, t, 1, 1, Math.abs(dx) < 8 ? WH : SKY)
+    if (Math.abs(dx) < 11) foam += r(MID + dx, t, 1, 2, WH)
+  }
+  return c + g('st-sf', foam)
 })()
-const SURF_CSS = `.st-sea{animation:st-sea 1.6s linear infinite}@keyframes st-sea{100%{transform:translateX(-${SEA_P}px)}}`
-  + '.st-curl{animation:st-swell 1.6s ease-in-out infinite}@keyframes st-swell{50%{transform:translateY(1px)}}'
-  + '.st-spr{animation:st-spr 1s ease-out infinite}.st-spr1{animation-delay:-.33s}.st-spr2{animation-delay:-.66s}'
-  + '@keyframes st-spr{0%{transform:translate(0,0);opacity:1}100%{transform:translate(3px,-5px);opacity:0}}'
-  // The surfer rides 6 px up, on the water, rising and falling with the swell.
-  + '.st-tr{transform:translateY(-6px);animation:st-ride 1.6s ease-in-out infinite}@keyframes st-ride{50%{transform:translateY(-8px)}}'
+// Swell k peaks under the crab at SURF·(k+.5)/3 s; its animation is halfway then.
+const SWELLS = SET.map((size, k) => `<g class="st-sw" style="animation-delay:${+(SURF * (k + .5) / 3 - SURF / 2 - SURF).toFixed(2)}s">`
+  + `<g class="st-sy"><g transform="translate(0,41) scale(1,${size}) translate(0,-41)">${SWELL}</g></g></g>`).join('')
+// The board rides the water under its middle, the band or the tallest swell there, and tilts with its slope: nose
+// up climbing a swell, down running off it.
+const water = (s: number, dx: number) => Math.max(6, ...SET.map((size, k) => {
+  const p = ((s - (SURF * (k + .5) / 3 - SURF / 2)) / SURF % 1 + 1) % 1
+  return size * grow(p) * bell(70 - 140 * p - dx)
+}))
+const RIDE = Array.from({ length: 49 }, (_, i) => {
+  const s = SURF * i / 48, y = 1 - water(s, 0) - 39.7 + 41
+  const a = Math.max(-18, Math.min(18, -Math.atan((water(s, 3) - water(s, -3)) / 6) * 180 / Math.PI))
+  return `${+(i / .48).toFixed(2)}%{transform:translateY(${+y.toFixed(1)}px) translate(${MID}px,39px) rotate(${+a.toFixed(1)}deg) translate(-${MID}px,-39px)}`
+}).join('')
+const SURF_CSS = `.st-sea{animation:st-sea .4s linear infinite}@keyframes st-sea{100%{transform:translateX(-${SEA_P}px)}}`
+  + `.st-sw{animation:st-sx ${SURF}s linear infinite}@keyframes st-sx{0%{transform:translateX(70px)}100%{transform:translateX(-70px)}}`
+  + `.st-sy{transform-box:fill-box;transform-origin:50% 100%;animation:st-sy ${SURF}s linear infinite}`
+  + '@keyframes st-sy{0%{transform:scaleY(.1)}50%,70%{transform:scaleY(1)}100%{transform:scaleY(0)}}'
+  + `.st-sf{opacity:0;animation:st-sf ${SURF}s linear infinite}@keyframes st-sf{0%,48%{opacity:0}56%,80%{opacity:1}95%,100%{opacity:0}}`
+  + `.st-tr{transform-box:view-box;transform-origin:0 0;animation:st-ride ${SURF}s linear infinite}@keyframes st-ride{${RIDE}}`
+  // The swells tilt and lift the crab now; its own rock from the narrow band would float it off the water.
+  + '.st-tr .cb-web2 .cb-all{animation:none}'
+  // Each swell's height and foam keep its own clock, set on the swell.
+  + '.st-sw *{animation-delay:inherit}'
 // The antenna take: three rings out of the antenna's tip.
 const PING = [0, -.6, -1.2].map(d => `<circle cx="28" cy="6.8" r="18" fill="none" stroke-width="1.5" vector-effect="non-scaling-stroke" class="st-pg" style="animation-delay:${d}s"/>`).join('')
 const PING_CSS = '.st-pg{stroke:#85B7EB;transform-box:fill-box;transform-origin:50% 50%;animation:st-pg 1.8s ease-out infinite}'
   + '@keyframes st-pg{0%{transform:scale(.1);opacity:1}100%{transform:scale(1);opacity:0}}@media (prefers-color-scheme:light){.st-pg{stroke:#378ADD}}'
-// The globe take: a globe on a stand at the crab's left, its land turning, a satellite on its orbit.
+// The globe take: a globe on a stand at the crab's left, Asia on it with India at the middle (Praj, 21 Oct: a
+// 16 px globe of green flecks read as plain water), rocking a little on its axis, a satellite on its orbit.
+const ASIA = [
+  '......##########........',
+  '....##############......',
+  '...################.....',
+  '..##################....',
+  '..##################.#..',
+  '.###################.##.',
+  '.###################.##.',
+  '..#################..#..',
+  '#.################......',
+  '##..##############......',
+  '###..##.########.#......',
+  '####..#######..###......',
+  '.###..######...####.....',
+  '..##...#####....###.....',
+  '...#....###.....##......',
+  '........###......#......',
+  '.........#.......##.....',
+  '.........#........#.###.',
+  '..........#....####.#...',
+  '...............#.###....',
+]
 const GLOBE = (() => {
-  const land = r(0, 3, 4, 3, GRN) + r(1, 6, 2, 4, GRN) + r(9, 2, 5, 4, GRN) + r(10, 6, 3, 2, GRN) + r(12, 9, 3, 3, GRN) + r(5, 11, 3, 2, GRN)
-  return g('st-globe', '<defs><clipPath id="st-gc"><circle cx="-11" cy="22" r="8"/></clipPath></defs>'
-    + `<circle cx="-11" cy="22" r="8" fill="${BLU}"/>`
-    + `<g clip-path="url(#st-gc)"><g class="st-land"><g transform="translate(-19,14)">${land}</g><g transform="translate(-3,14)">${land}</g></g></g>`
-    + `<circle cx="-11" cy="22" r="8" fill="none" stroke="${SKY}" stroke-width="1"/>` + r(-12, 30, 2, 5, G) + r(-16, 35, 10, 2, B)
-    + g('st-orb', r(-12, 12, 2, 2, WH)))
+  // the map's top-left in stage px: the globe is 24 across, centred on (-15, 19)
+  const land = ASIA.map((row, y) => [...row].map((c, x) => c === '#' ? r(x - 27, y + 9, 1, 1, GRN) : '').join('')).join('')
+  return g('st-globe', '<defs><clipPath id="st-gc"><circle cx="-15" cy="19" r="12"/></clipPath></defs>'
+    + `<circle cx="-15" cy="19" r="12" fill="${BLU}"/>`
+    + `<g clip-path="url(#st-gc)"><g class="st-land">${land}</g></g>`
+    + `<circle cx="-15" cy="19" r="12" fill="none" stroke="${SKY}" stroke-width="1"/>` + r(-16, 31, 2, 5, G) + r(-21, 36, 12, 2, B)
+    + g('st-orb', r(-16, 5, 2, 2, WH)))
 })()
-const GLOBE_CSS = '.st-land{animation:st-land 3s linear infinite}@keyframes st-land{100%{transform:translateX(-16px)}}'
-  + '.st-orb{animation:st-orb 2.4s linear infinite}@keyframes st-orb{0%,100%{transform:translate(-10px,8px)}25%{transform:translate(0,-1px)}50%{transform:translate(10px,8px)}75%{transform:translate(0,17px)}}'
+const GLOBE_CSS = '.st-land{animation:st-land 6s ease-in-out infinite}@keyframes st-land{0%,100%{transform:translateX(2px)}50%{transform:translateX(-2px)}}'
+  + '.st-orb{animation:st-orb 2.4s linear infinite}@keyframes st-orb{0%,100%{transform:translate(-14px,13px)}25%{transform:translate(0,-1px)}50%{transform:translate(14px,13px)}75%{transform:translate(0,27px)}}'
   + '@media (prefers-reduced-motion:reduce){.st-globe *{animation:none}}'
 
 /** The crab acting out take `t` of `mood` on the stage, walking in from `from` (0 to 1), then wandering; `tip` shows
  *  over its head while the pointer is on it (the Svg must be drawn interactive for :hover). */
 export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): string {
-  const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = ROAM[mood]
+  const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = roamOf(mood, t)
   let crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
   if (mood === 'web') crab = crab.replace(WEB_GLOBE, '').replace(WEB_WAVE, '')
   const steps = Math.ceil(d / .2), once = !!roam?.[2], legs = once ? Math.round(roam![0] / .4) : 'infinite'
@@ -611,7 +658,7 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   }
   // What rides with the crab, behind it: build's wall, web's curl, rings and globe.
   let rides = ''
-  if (mood === 'web' && t === 2) { fx += SEA; rides = g('st-fx', CURL); fxCss += SURF_CSS }
+  if (mood === 'web' && t === 2) { fx += SEA; rides = g('st-fx', SWELLS); fxCss += SURF_CSS }
   if (mood === 'web' && t === 0) { rides = g('st-fx', PING); fxCss += PING_CSS }
   // The globe is the take's prop, so reduced motion keeps it, still.
   if (mood === 'web' && t === 1) { rides = GLOBE; fxCss += GLOBE_CSS }
@@ -636,8 +683,8 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
     }
     return k.some(f => !f.includes('(0px)')) ? { css: `.${name}{animation:${name} ${clock}}@keyframes ${name}{${k.join('')}}`, name } : undefined
   }
-  const lw = tip && go ? swap('st-lw', u => where(mood, from, d * u), `${+d.toFixed(2)}s step-end`) : undefined
-  const lr = tip && roam ? swap('st-lr', u => where(mood, from, d + roam[0] * u), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`) : undefined
+  const lw = tip && go ? swap('st-lw', u => where(mood, from, d * u, t), `${+d.toFixed(2)}s step-end`) : undefined
+  const lr = tip && roam ? swap('st-lr', u => where(mood, from, d + roam[0] * u, t), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`) : undefined
   const wrap = (g: string) => [lr, lw].reduce((a, l) => l ? `<g class="${l.name}">${a}</g>` : a, g)
   const label = tip ? wrap(`<g class="st-tip"><rect x="${lx}" y="0" width="${w}" height="13.5" rx="3" class="st-bg"/>`
     + `<text x="${lx + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${tw}" lengthAdjust="spacing">`

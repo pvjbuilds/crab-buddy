@@ -316,15 +316,28 @@ test('stage: build lays a wall, paint leaves a stripe, sub sends minis, web surf
   expect(stageArt('sub', 0, .6).match(/class="st-mc"/g)?.length).toBe(2)
   // Only the first take sends them: the others draw their own minis, which doubled up (21 Oct).
   for (const t of [1, 2, 3]) expect(stageArt('sub', t, .6)).not.toContain('st-mc')
-  // Web (21 Oct: a thin strip under every take read as a dashed line): only the surf take rides a sea, rolling
-  // left as the crab rides right, its tiles anchored to the strip so the crests sit on top; the crab rides up on it
-  // in front of a breaking curl. The antenna take sends rings, the globe take turns a big globe.
+  // Web (21 Oct: a thin strip under every take read as a dashed line): only the surf take rides a sea. One water:
+  // a low band rolling left, and swells that rise out of it ahead of the crab, lift it as they pass under, break
+  // and sink behind; each next swell bigger than the last (Praj, 21 Oct, live: a separate curl over a tiled sea
+  // read as two waves). The antenna take sends rings, the globe take turns a big globe.
   const [antenna, globe, surf, arcs] = [0, 1, 2, 3].map(t => stageArt('web', t, .7))
   expect([antenna, globe, arcs].some(w => w.includes('st-sea'))).toBe(false)
   const sea = surf.match(/<pattern id="st-sea" y="([\d.]+)"[^]*?<rect x="0" y="([\d.]+)"[^>]*fill="url\(#st-sea\)"/)
-  expect([sea?.[1], sea?.[2]]).toEqual(['29', '29'])
+  expect([sea?.[1], sea?.[2]]).toEqual(['35', '35'])
   expect(surf).toMatch(/@keyframes st-sea\{100%\{transform:translateX\(-\d+px\)\}\}/)
-  expect([surf.includes('st-curl'), surf.includes('.st-tr{transform:translateY(-6px)')]).toEqual([true, true])
+  expect(surf).not.toContain('st-curl')
+  // Swells in the order they pass under the crab, each bigger, and the crab rides highest on the biggest.
+  const sw = [...surf.matchAll(/<g class="st-sw" style="animation-delay:(-?[\d.]+)s"><g class="st-sy"><g transform="translate\(0,41\) scale\(1,([\d.]+)\)/g)]
+    .map(m => ({ peak: ((2.4 + Number(m[1])) % 4.8 + 4.8) % 4.8, size: Number(m[2]) })).sort((a, b) => a.peak - b.peak)
+  expect(sw.length).toBe(3)
+  expect(sw[0].size < sw[1].size && sw[1].size < sw[2].size).toBe(true)
+  const ride = [...surf.matchAll(/([\d.]+)%\{transform:translateY\((-?[\d.]+)px\)/g)].map(m => ({ at: Number(m[1]) * .048, y: Number(m[2]) }))
+  const top = ride.reduce((a, b) => b.y < a.y ? b : a)
+  expect(Math.abs(top.at - sw[2].peak) < .3).toBe(true)
+  // Surfing, the crab holds its spot on the curl while the sea runs past; a wander dragged the curl away over a
+  // sea going the other way, two waves (Praj, 21 Oct, live). The other takes still wander, and where() agrees.
+  expect([surf.includes('.st-in{animation'), antenna.includes('.st-in{animation')]).toEqual([false, true])
+  expect([where('web', .7, 6, 2), where('web', .7, 6, 0) < .7]).toEqual([.7, true])
   expect([antenna.match(/class="st-pg"/g)?.length, globe.includes('st-globe')]).toEqual([3, true])
   // The globe is the take's prop, not an extra: with reduced motion it stays, standing still.
   expect([globe.includes('<g class="st-fx"><g class="st-globe">'), globe.includes('@media (prefers-reduced-motion:reduce){.st-globe *{animation:none}}')]).toEqual([false, true])
