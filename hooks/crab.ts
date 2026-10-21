@@ -1,6 +1,9 @@
 import type { Mood } from '../types'
 
 const TEST = /\b(pytest|jest|vitest|unittest|plugin test|(npm|pnpm|yarn|bun|go|cargo|deno) test)\b/
+// Commands that only look: every step of the chain is one of these, and nothing is written with `>`.
+const LOOK = /^(cd|ls|tree|pwd|cat|head|tail|less|wc|file|stat|which|echo|grep|rg|fd|find|jq|diff|sed -n|git (status|log|diff|show|blame))\b/
+const reads = (cmd: string) => !/(?<![0-9&])>/.test(cmd) && cmd.split(/&&|\|\||;|\|/).every(s => LOOK.test(s.trim()))
 const INSTALL = /\b((npm|pnpm|yarn|bun) (i|install|add)|pip3? install|uv (add|pip install|tool install)|brew install)\b/
 
 /** The mood a main-loop tool call starts. */
@@ -16,6 +19,7 @@ export function classify(tool: string, args: Record<string, unknown>): Mood {
   if (/(^|[\s;&|/])(codex|agy)\s/.test(cmd)) return 'codex'
   if (/\bgit (commit|push)\b/.test(cmd)) return 'git'
   if (INSTALL.test(cmd)) return 'inst'
+  if (reads(cmd)) return 'read'
   return 'build'
 }
 

@@ -8,8 +8,8 @@ import { COLS, ROWS } from './term.tsx'
 
 const crab = atom({ plugin: 'crab-buddy', key: 'crab' } as const, START)
 // What the crab acts out, which take, since when, the caption log (newest first) and the stage spot it walks
-// in from.
-type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number }
+// in from. `seed` is the crab's lastActive when the look came up, so the take clock keeps counting from there.
+type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number; seed?: number }
 const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle', take: 0, at: 0, log: [], from: 1 } as Look)
 // Rapid changes flashed by too fast to read (Praj, 12 Oct): a look stays at least this long, then the crab
 // jumps to whatever is current. The same mood keeps its take until the take's own clock moves it on.
@@ -31,15 +31,16 @@ async function show($: any, c: Crab, now: number) {
   const m = shown(c, now)
   if (now - was.at < DWELL && (m === was.mood || !CUT.has(m))) return
   if (m === was.mood) {
-    // A repeat (Read after Read) restarts lastActive, which would re-pick the take on every call.
-    const t = take({ ...c, lastActive: was.at }, now, m)
+    // A repeat (Read after Read) restarts lastActive, which would re-pick the take on every call. The look's own
+    // seed, not `at`: `at` moves with each take, which cut every take after the first at 8 s (21 Oct).
+    const t = take({ ...c, lastActive: was.seed ?? was.at }, now, m)
     if (t !== was.take) await update($, look, x => ({ ...x, take: t, at: now, from: here(x, now) }))
     return
   }
   const t = take(c, now, m)
   // A one-liner picked by the millisecond the mood came up; the caption scrolls down one line.
   const line = LINES[m][now % LINES[m].length]
-  await update($, look, x => ({ mood: m, take: t, at: now, from: here(x, now), log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
+  await update($, look, x => ({ mood: m, take: t, at: now, seed: c.lastActive, from: here(x, now), log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

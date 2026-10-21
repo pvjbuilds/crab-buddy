@@ -279,6 +279,9 @@ const LIGHT = (lit: 0 | 2, c: string, cls: string) => r(-5, 6, 6, 16, DK) + r(-3
   + [0, 1, 2].map(k => k === lit ? g(cls, r(-4, 7 + 5 * k, 4, 4, c)) : r(-4, 7 + 5 * k, 4, 4, '#3a3a38')).join('')
 const BUG = r(-4, 23, 3, 2, '#639922') + r(-5, 22, 1, 1, LG) + r(-1, 22, 1, 1, LG) + r(-5, 25, 1, 1, LG) + r(-1, 25, 1, 1, LG)
 const ROBOT = r(-6, 10, 7, 6, G) + g('cb-re', r(-5, 12, 2, 2, SKY) + r(-2, 12, 2, 2, SKY)) + r(-3, 8, 1, 2, G) + r(-5, 16, 5, 6, LG) + r(-5, 22, 1, 4, G) + r(-2, 22, 1, 4, G)
+// The web takes' globe and water beside the crab; on the stage they give way to the stage's own (stageArt).
+const WEB_GLOBE = r(-4, 10, 6, 8, BLU) + r(-5, 11, 8, 6, BLU) + g('cb-p1', r(-4, 11, 3, 2, GRN)) + g('cb-p2', r(-1, 13, 3, 3, GRN)) + g('cb-p3', r(-4, 15, 2, 2, GRN)) + r(-2, 18, 2, 2, G) + r(-4, 20, 6, 1, G)
+const WEB_WAVE = r(-6, 27, 38, 1, BLU) + g('cb-wa', r(-6, 22, 6, 5, BLU) + r(-5, 20, 3, 2, BLU) + r(-4, 19, 2, 1, WH))
 const bird = (cls: string) => g(cls, r(14, 3, 1, 1, WH) + r(15, 4, 1, 1, WH) + r(16, 3, 1, 1, WH))
 
 const TAKE: Record<string, [string, string?, number?]> = {
@@ -323,8 +326,8 @@ const TAKE: Record<string, [string, string?, number?]> = {
   night2: ['', r(1, 13, 2, 2, G) + r(-1, 11, 3, 2, G) + r(-3, 9, 3, 2, LG) + r(-5, 7, 3, 2, LG) + r(-1, 15, 1, 11, B) + r(-3, 22, 1, 4, B) + r(1, 22, 1, 4, B)
     + g('cb-t1', r(-4, 1, 1, 1, WH)) + g('cb-t2', r(1, -1, 1, 1, WH)) + g('cb-t3', r(4, 3, 1, 1, WH))],
   night3: ['', r(4, 2, 1, 1, G) + r(-4, 6, 1, 1, G) + g('cb-ss', r(24, 0, 2, 2, '#FAC775') + r(26, 0, 3, 1, 'rgba(250,199,117,.5)'))],
-  web1: ['', r(-4, 10, 6, 8, BLU) + r(-5, 11, 8, 6, BLU) + g('cb-p1', r(-4, 11, 3, 2, GRN)) + g('cb-p2', r(-1, 13, 3, 3, GRN)) + g('cb-p3', r(-4, 15, 2, 2, GRN)) + r(-2, 18, 2, 2, G) + r(-4, 20, 6, 1, G)],
-  web2: [r(4, 26, 22, 1, WOOD), r(-6, 27, 38, 1, BLU) + g('cb-wa', r(-6, 22, 6, 5, BLU) + r(-5, 20, 3, 2, BLU) + r(-4, 19, 2, 1, WH))],
+  web1: ['', WEB_GLOBE],
+  web2: [r(4, 26, 22, 1, WOOD), WEB_WAVE],
   web3: [r(14, 5, 2, 5, G) + r(14, 4, 2, 1, RED) + g('cb-a1', r(11, 3, 1, 1, SKY) + r(12, 2, 6, 1, SKY) + r(18, 3, 1, 1, SKY)) + g('cb-a2', r(9, 1, 1, 1, SKY) + r(10, 0, 10, 1, SKY) + r(20, 1, 1, 1, SKY))],
   sub1: ['', g('cb-mini', mini('', -7, 17, .4) + r(-5, 18, 5, 3, B) + r(-3, 18, 1, 3, Y))],
   sub2: [r(24, 6, 3, 4, G) + r(25, 4, 1, 2, G), mini('cb-mini', -7, 17, .4) + g('cb-s1', r(1, 19, 1, 2, SKY)) + g('cb-s2', r(2, 18, 1, 4, SKY)), 10],
@@ -507,11 +510,62 @@ export function where(mood: Mood, from: number, s: number): number {
 // 4.9 to 6.9 px a letter by text). ponytail: Helvetica-ish classes; the pill's spacing absorbs the rest.
 const em = (c: string) => /[ijl.,:;'|!I]/.test(c) ? .23 : /[ftr ]/.test(c) ? .3 : /[mwMW]/.test(c) ? .83 : /[A-Z]/.test(c) ? .68 : .54
 
+// Web on the stage (21 Oct: one thin strip under every take read as a dashed line, not water). In stage px, the
+// crab's box 52×41 at the origin; the pieces that ride with the crab are drawn in its box.
+const DEEP = '#2A6DB8', SEA_P = 32, SEA_H = 12
+// The surf take's sea: a sine swell 32 px long, foam on the crests, a deep band below. The pattern starts where the
+// strip does, so the crests sit on top: unanchored tiles drew a solid line over dashes of foam.
+const SEA = (() => {
+  let tile = ''
+  for (let x = 0; x < SEA_P; x++) {
+    const top = Math.round(5.5 - 3.5 * Math.sin(2 * Math.PI * x / SEA_P))
+    tile += r(x, top, 1, SEA_H - top, BLU) + r(x, top, 1, 1, top <= 3 ? WH : SKY) + r(x, SEA_H - 3, 1, 3, DEEP)
+  }
+  tile += r(6, 3, 1, 1, WH) + r(11, 3, 1, 1, WH) + r(20, 9, 3, 1, SKY) + r(27, 8, 2, 1, SKY)
+  return `<defs><pattern id="st-sea" y="${41 - SEA_H}" width="${SEA_P}" height="${SEA_H}" patternUnits="userSpaceOnUse">${tile}</pattern></defs>`
+    + `<g class="st-sea"><rect x="0" y="${41 - SEA_H}" width="200%" height="${SEA_H}" fill="url(#st-sea)"/></g>`
+})()
+// The breaking wave behind the surfer: its back, the lip pitching over the crab's tail, the tube under it, the face
+// it rides down, and spray off the lip.
+const CURL = (() => {
+  const back = [35, 32, 29, 27, 25, 23, 22, 21, 20, 19, 19, 18, 18, 18, 18, 18, 19]
+  let c = back.map((t, k) => r(k - 22, t, 1, 41 - t, BLU) + r(k - 22, t, 1, 1, WH)).join('')
+  c += r(-5, 19, 3, 2, BLU) + r(-5, 19, 3, 1, WH) + r(-2, 20, 2, 2, BLU) + r(-2, 20, 2, 1, WH) + r(0, 21, 2, 3, WH) + r(1, 24, 1, 1, WH)
+  c += r(-5, 21, 5, 20, DEEP) + r(0, 24, 3, 17, DEEP)
+  for (let x = 3; x < 14; x++) { const t = 26 + Math.round((x - 3) * .35); c += r(x, t, 1, 41 - t, BLU) + r(x, t, 1, 1, SKY) }
+  c += r(-14, 26, 4, 1, SKY) + r(-9, 31, 3, 1, SKY) + r(-18, 33, 3, 1, SKY)
+  c += [[2, 18], [5, 20], [0, 16]].map(([x, y], k) => g(`st-spr st-spr${k}`, r(x, y, 1, 1, WH))).join('')
+  return g('st-curl', c)
+})()
+const SURF_CSS = `.st-sea{animation:st-sea 1.6s linear infinite}@keyframes st-sea{100%{transform:translateX(-${SEA_P}px)}}`
+  + '.st-curl{animation:st-swell 1.6s ease-in-out infinite}@keyframes st-swell{50%{transform:translateY(1px)}}'
+  + '.st-spr{animation:st-spr 1s ease-out infinite}.st-spr1{animation-delay:-.33s}.st-spr2{animation-delay:-.66s}'
+  + '@keyframes st-spr{0%{transform:translate(0,0);opacity:1}100%{transform:translate(3px,-5px);opacity:0}}'
+  // The surfer rides 6 px up, on the water, rising and falling with the swell.
+  + '.st-tr{transform:translateY(-6px);animation:st-ride 1.6s ease-in-out infinite}@keyframes st-ride{50%{transform:translateY(-8px)}}'
+// The antenna take: three rings out of the antenna's tip.
+const PING = [0, -.6, -1.2].map(d => `<circle cx="28" cy="6.8" r="18" fill="none" stroke-width="1.5" vector-effect="non-scaling-stroke" class="st-pg" style="animation-delay:${d}s"/>`).join('')
+const PING_CSS = '.st-pg{stroke:#85B7EB;transform-box:fill-box;transform-origin:50% 50%;animation:st-pg 1.8s ease-out infinite}'
+  + '@keyframes st-pg{0%{transform:scale(.1);opacity:1}100%{transform:scale(1);opacity:0}}@media (prefers-color-scheme:light){.st-pg{stroke:#378ADD}}'
+// The globe take: a globe on a stand at the crab's left, its land turning, a satellite on its orbit.
+const GLOBE = (() => {
+  const land = r(0, 3, 4, 3, GRN) + r(1, 6, 2, 4, GRN) + r(9, 2, 5, 4, GRN) + r(10, 6, 3, 2, GRN) + r(12, 9, 3, 3, GRN) + r(5, 11, 3, 2, GRN)
+  return g('st-globe', '<defs><clipPath id="st-gc"><circle cx="-11" cy="22" r="8"/></clipPath></defs>'
+    + `<circle cx="-11" cy="22" r="8" fill="${BLU}"/>`
+    + `<g clip-path="url(#st-gc)"><g class="st-land"><g transform="translate(-19,14)">${land}</g><g transform="translate(-3,14)">${land}</g></g></g>`
+    + `<circle cx="-11" cy="22" r="8" fill="none" stroke="${SKY}" stroke-width="1"/>` + r(-12, 30, 2, 5, G) + r(-16, 35, 10, 2, B)
+    + g('st-orb', r(-12, 12, 2, 2, WH)))
+})()
+const GLOBE_CSS = '.st-land{animation:st-land 3s linear infinite}@keyframes st-land{100%{transform:translateX(-16px)}}'
+  + '.st-orb{animation:st-orb 2.4s linear infinite}@keyframes st-orb{0%,100%{transform:translate(-10px,8px)}25%{transform:translate(0,-1px)}50%{transform:translate(10px,8px)}75%{transform:translate(0,17px)}}'
+  + '@media (prefers-reduced-motion:reduce){.st-globe *{animation:none}}'
+
 /** The crab acting out take `t` of `mood` on the stage, walking in from `from` (0 to 1), then wandering; `tip` shows
  *  over its head while the pointer is on it (the Svg must be drawn interactive for :hover). */
 export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): string {
   const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = ROAM[mood]
-  const crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
+  let crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
+  if (mood === 'web') crab = crab.replace(WEB_GLOBE, '').replace(WEB_WAVE, '')
   const steps = Math.ceil(d / .2), once = !!roam?.[2], legs = once ? Math.round(roam![0] / .4) : 'infinite'
   const css = '.st-at,.st-in{transform-box:view-box}'
     + `.st-at{transform:${x(to)}}`
@@ -549,27 +603,24 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
     trail(40, to, to + .4, d, roam![0]).forEach(({ f, t }) => fx += `<g class="st-sp" style="transform:${x(f)};animation-delay:${t.toFixed(2)}s">${r(4, 37, 14, 2.5, BLU)}</g>`)
     fxCss += '.st-sp{transform-box:view-box;animation:st-sp .3s ease-out both}@keyframes st-sp{0%{opacity:0}100%{opacity:1}}'
   }
-  if (mood === 'sub') {
+  if (mood === 'sub' && !t) {
     // Two mini crabs trot the whole stage, half a lap apart.
     for (const delay of [0, -7]) fx += `<g class="st-mc" style="animation-delay:${delay}s"><g class="st-mb"><g transform="translate(0,28) scale(.4)">${MINI_BODY}</g></g></g>`
     fxCss += '.st-mc{transform-box:view-box;animation:st-mc 14s linear infinite}@keyframes st-mc{0%{transform:translateX(-14px)}100%{transform:translateX(100%)}}'
       + '.st-mb{animation:st-mb .3s ease-in-out infinite}@keyframes st-mb{50%{transform:translateY(-1px)}}'
   }
-  if (mood === 'web') {
-    // A wave scrolls under the crab and it surfs; the second rect fills the gap the first's -16 offset leaves at the right.
-    fx += `<defs><pattern id="st-wave" width="16" height="6" patternUnits="userSpaceOnUse">${r(0, 3, 16, 3, BLU) + r(3, 1, 6, 2, SKY) + r(4, 0, 3, 1, WH)}</pattern></defs>`
-      + '<g class="st-wv"><rect x="-16" y="35" width="100%" height="6" fill="url(#st-wave)"/><rect x="50%" y="35" width="50%" height="6" fill="url(#st-wave)"/></g>'
-    fxCss += '.st-wv{animation:st-wv 1.2s linear infinite}@keyframes st-wv{100%{transform:translateX(16px)}}'
-      + '.st-tr{animation:st-bob 1.2s ease-in-out infinite}@keyframes st-bob{50%{transform:translateY(-2px)}}'
-  }
-  // Build lays a wall leftward, course by course, riding with the crab.
-  let wall = ''
+  // What rides with the crab, behind it: build's wall, web's curl, rings and globe.
+  let rides = ''
+  if (mood === 'web' && t === 2) { fx += SEA; rides = g('st-fx', CURL); fxCss += SURF_CSS }
+  if (mood === 'web' && t === 0) { rides = g('st-fx', PING); fxCss += PING_CSS }
+  // The globe is the take's prop, so reduced motion keeps it, still.
+  if (mood === 'web' && t === 1) { rides = GLOBE; fxCss += GLOBE_CSS }
+  // Build lays a wall leftward, course by course.
   if (mood === 'build' && !t) {
     const bricks = [...Array.from({ length: 10 }, (_, k) => [-2 - (k + 1) * 9, 34.5]), ...Array.from({ length: 9 }, (_, k) => [-6.5 - (k + 1) * 9, 30])]
-    wall = g('st-fx', bricks.map(([bx, by], j) => `<rect x="${bx}" y="${by}" width="8" height="4" fill="${j % 2 ? BR2 : BR}" class="st-bk" style="animation-delay:${(d + .3 + j * .45).toFixed(2)}s"/>`).join(''))
+    rides = g('st-fx', bricks.map(([bx, by], j) => `<rect x="${bx}" y="${by}" width="8" height="4" fill="${j % 2 ? BR2 : BR}" class="st-bk" style="animation-delay:${(d + .3 + j * .45).toFixed(2)}s"/>`).join(''))
     fxCss += '.st-bk{animation:st-bk .25s ease-out both}@keyframes st-bk{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:none}}'
   }
-  fxCss += '@media (prefers-reduced-motion:reduce){.st-fx{display:none}.st-tr{animation:none}}'
   // The label, in the art's clear top 13.67 px; it ends at the crab's right edge on the right half of the stage
   // and starts at its left edge on the left half, so it never runs off. 13.5 tall: 12 read squashed (Praj, 12 Oct).
   // Only the spacing flexes to fit: stretched glyphs read squat and low-res (recording 12:30).
@@ -591,6 +642,10 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   const label = tip ? wrap(`<g class="st-tip"><rect x="${lx}" y="0" width="${w}" height="13.5" rx="3" class="st-bg"/>`
     + `<text x="${lx + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${tw}" lengthAdjust="spacing">`
     + `${tip.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text></g>`) : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${fxCss}${lw?.css ?? ''}${lr?.css ?? ''}</style>${fx ? g('st-fx', fx) : ''}`
-    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in"><rect width="${W}" height="41" fill="transparent"/>${wall}<g class="st-tr">${crab}</g>${label}</g></g></svg>`
+  // Reduced motion: no extras, and the crab stands at its station without walking, wandering or riding; last, so
+  // no later rule of the same weight starts a motion again (21 Oct: the walk-in and wander still played).
+  const moving = ['.st-tr', go && '.st-go', roam && '.st-in', lw && '.st-lw', lr && '.st-lr'].filter(Boolean).join()
+  const still = `@media (prefers-reduced-motion:reduce){.st-fx{display:none}${moving}{animation:none}.st-tr{transform:none}}`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${fxCss}${lw?.css ?? ''}${lr?.css ?? ''}${still}</style>${fx ? g('st-fx', fx) : ''}`
+    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in"><rect width="${W}" height="41" fill="transparent"/>${rides}<g class="st-tr">${crab}</g>${label}</g></g></svg>`
 }

@@ -16,7 +16,14 @@ test('a tool call picks the crab mood from the tool and, for Bash, the command',
   expect(classify('Bash', { command: 'git add -A && git commit -m x' })).toBe('git')
   expect(classify('Bash', { command: 'brew install jq' })).toBe('inst')
   expect(classify('Bash', { command: 'uv pip install rich' })).toBe('inst')
-  expect(classify('Bash', { command: 'ls -la' })).toBe('build')
+  // Reading through Bash is reading, not building (21 Oct): a look shows only what really happens.
+  expect(classify('Bash', { command: 'ls -la' })).toBe('read')
+  expect(classify('Bash', { command: 'cd ~/x && grep -n foo a.ts | head -20' })).toBe('read')
+  expect(classify('Bash', { command: "sed -n 1,40p hooks/crab.ts" })).toBe('read')
+  expect(classify('Bash', { command: 'rg -l term 2>/dev/null; git log --oneline -3' })).toBe('read')
+  expect(classify('Bash', { command: "sed -i '' s/a/b/ x.ts" })).toBe('build')
+  expect(classify('Bash', { command: 'cat a > b' })).toBe('build')
+  expect(classify('Bash', { command: 'ls && bun run build' })).toBe('build')
   expect(classify('mcp__x__thing', {})).toBe('think')
 })
 
@@ -307,10 +314,32 @@ test('stage: build lays a wall, paint leaves a stripe, sub sends minis, web surf
   near(where('paint', .3, 20), .7)
   expect(stageArt('paint', 0, .3).match(/class="st-sp"/g)?.length).toBe(40)
   expect(stageArt('sub', 0, .6).match(/class="st-mc"/g)?.length).toBe(2)
-  const web = stageArt('web', 0, .7)
-  expect([web.includes('id="st-wave"'), web.includes('st-bob')]).toEqual([true, true])
-  for (const m of MOODS) expect(stageArt(m, 0, 0)).toContain('@media (prefers-reduced-motion:reduce){.st-fx{display:none}.st-tr{animation:none}}')
-  for (const m of ['idle', 'ask'] as Mood[]) expect(stageArt(m, 0, 1)).not.toMatch(/st-bk|st-sp|st-mc|st-wave|st-cf/)
+  // Only the first take sends them: the others draw their own minis, which doubled up (21 Oct).
+  for (const t of [1, 2, 3]) expect(stageArt('sub', t, .6)).not.toContain('st-mc')
+  // Web (21 Oct: a thin strip under every take read as a dashed line): only the surf take rides a sea, rolling
+  // left as the crab rides right, its tiles anchored to the strip so the crests sit on top; the crab rides up on it
+  // in front of a breaking curl. The antenna take sends rings, the globe take turns a big globe.
+  const [antenna, globe, surf, arcs] = [0, 1, 2, 3].map(t => stageArt('web', t, .7))
+  expect([antenna, globe, arcs].some(w => w.includes('st-sea'))).toBe(false)
+  const sea = surf.match(/<pattern id="st-sea" y="([\d.]+)"[^]*?<rect x="0" y="([\d.]+)"[^>]*fill="url\(#st-sea\)"/)
+  expect([sea?.[1], sea?.[2]]).toEqual(['29', '29'])
+  expect(surf).toMatch(/@keyframes st-sea\{100%\{transform:translateX\(-\d+px\)\}\}/)
+  expect([surf.includes('st-curl'), surf.includes('.st-tr{transform:translateY(-6px)')]).toEqual([true, true])
+  expect([antenna.match(/class="st-pg"/g)?.length, globe.includes('st-globe')]).toEqual([3, true])
+  // The globe is the take's prop, not an extra: with reduced motion it stays, standing still.
+  expect([globe.includes('<g class="st-fx"><g class="st-globe">'), globe.includes('@media (prefers-reduced-motion:reduce){.st-globe *{animation:none}}')]).toEqual([false, true])
+  // The stage draws its own water and globe, so the crab's small ones stay out; the narrow band keeps them.
+  expect([surf.includes('class="cb-wa"'), globe.includes('class="cb-p1"')]).toEqual([false, false])
+  expect([crabArt('web', 2).includes('class="cb-wa"'), crabArt('web', 1).includes('class="cb-p1"')]).toEqual([true, true])
+  // Reduced motion: no extras, and the crab stands still at its station, label too (21 Oct: it still walked).
+  // Last in the style, so no later rule of the same weight starts a motion again.
+  for (const m of MOODS) for (const t of [0, 2]) for (const from of [0, STATION[m]]) {
+    const svg = stageArt(m, t, from, 'What it means')
+    const still = svg.match(/@media \(prefers-reduced-motion:reduce\)\{\.st-fx\{display:none\}([^{]*)\{animation:none\}\.st-tr\{transform:none\}\}<\/style>/)?.[1]
+    const moving = ['st-tr', 'st-go', 'st-in', 'st-lw', 'st-lr'].filter(c => svg.includes(`.${c}{animation:`))
+    expect([m, t, still?.split(',').sort()]).toEqual([m, t, ['.st-tr', ...moving.filter(c => c !== 'st-tr').map(c => `.${c}`)].sort()])
+  }
+  for (const m of ['idle', 'ask'] as Mood[]) expect(stageArt(m, 0, 1)).not.toMatch(/st-bk|st-sp|st-mc|st-sea|st-pg|st-globe|st-cf/)
 })
 
 test('every take plays as a 14 s scene: work, a beat at ~5 s, work, another beat at ~10 s, each take its own pair (Praj, 16 Oct)', () => {

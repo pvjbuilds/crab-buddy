@@ -1,6 +1,6 @@
 {
   "name": "crab-buddy",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "An animated pixel-art Claude crab above your prompt that acts out what Claude Code is doing: thinking, reading, building (ten scenes), testing, debugging, web, subagents, git, installs, long turns, compacting, idle, dozing and night owl. 25 moods, 110 takes, each a 14 s scene with beats and emotes; it walks a stage in the desktop app and draws in block characters in the terminal. A caption of one-liners scrolls beside it; each look holds 8 s, so nothing flashes. Light and dark themes, reduce-motion aware. 0 tokens.",
   "author": {
     "name": "Praj",

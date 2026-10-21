@@ -131,6 +131,28 @@ test('idle moves on to its next take after 42 s, still idle (Praj, 12 Oct)', asy
   expect(a?.source).not.toBe(b?.source)
 })
 
+// 21 Oct (Astra): each take change restarted the take's clock, so after the first scene a take was cut at 8 s,
+// before its second beat at ~10 s.
+test('a long look plays every take a full 14 s scene, not just the first', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('turn.start', () => ({ turnId: 't1' }) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const svg = async () => (await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).find({ type: 'Svg' }))?.props
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await clock.advance(15_000)
+  const second = await svg()
+  await clock.advance(12_000)
+  const later = await svg()
+  await clock.advance(2_000)
+  const third = await svg()
+  expect([second?.alt, later?.alt, third?.alt]).toEqual(['Claude crab: think', 'Claude crab: think', 'Claude crab: think'])
+  expect(later?.source).toBe(second?.source)
+  expect(third?.source).not.toBe(second?.source)
+})
+
 test('the caption: the newest one-liner in full text colour, alone or beside other lines and cards (Praj, 14 Oct)', async ($, on) => {
   let card = false
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return (card ? h(Box, {}, h(Text, {}, 'card')) : h(Box, {})) as never })

@@ -64,7 +64,7 @@ const GROUPS: [string, string, Term[]][] = [
     ['lap', 'One pass through the five build scenes (70 s). Lap 2 plays each scene\'s take 1: weld, drill, blueprint, sweep, crane. So 10 scenes, 140 s, before one repeats.', 'a third lap', '<code>take()</code> in <code>crab.ts</code>'],
     ['walk-in', 'The sideways scuttle from where the crab stands to the new look\'s station. The whole stage takes 4.8 s; never under 0.8 s.', 'faster walk-in', '<code>walkFor()</code> in <code>art.ts</code>'],
     ['roam', 'A slow drift about the station on a long loop: idle 80 s, think 24 s, read 32 s, web 12 s, done 10 s, long 40 s. Paint walks right once.', 'idle roams too far', '<code>ROAM</code> in <code>art.ts</code>'],
-    ['stage extras', 'Stage-wide effects behind the crab: the brick wall (build), paint stripe (paint), confetti (fixed), footprints (walk-in), the trip (testf). Hidden under reduce motion.', 'more confetti; no footprints', '<code>stageArt()</code>, <code>.st-fx</code>'],
+    ['stage extras', 'Stage-wide effects behind the crab: the brick wall (build), paint stripe (paint), confetti (fixed), footprints (walk-in), the trip (testf), mini crabs (sub), and by web take the rings (antenna) or the sea and its curl (surf). Hidden under reduce motion.', 'more confetti; no footprints', '<code>stageArt()</code>, <code>.st-fx</code>'],
     ['walking takes', 'Takes that walk their legs the whole time: inst, codex, think3, done2.', 'make read walk', '<code>WALKS</code> in <code>art.ts</code>'],
     ['terminal crab', 'The block-character crab in a terminal. One look per mood, a frame every 150 ms. No takes, scenes, beats or stage there.', 'the terminal crab', '<code>term.tsx</code> · <code>LOOKS</code>, <code>FRAME</code>'],
   ]],
