@@ -54,7 +54,8 @@ async function retime($: any) {
   await show($, await read($, crab), await $.clock.now())
 }
 
-const FOOTER: ReadonlySet<string> = new Set(['handoff-wait'])
+// The maintainer's cache clock, renamed from handoff-wait (Praj, 24 Oct).
+const FOOTER: ReadonlySet<string> = new Set(['cache'])
 
 // An empty band: nothing drawn, or a Box with no children.
 const isEmpty = (n: unknown) => {

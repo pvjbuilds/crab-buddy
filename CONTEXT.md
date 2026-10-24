@@ -65,7 +65,7 @@ Claude crab above the prompt and acts out what the session is doing. No model ca
   Chromium, not live captures: a live session shows the maintainer's other mods in the band. Topics picked by
   GitHub topic counts; Jev's ranking of them was mostly in its unsure band.
 - 2026-10-11: Every other plugin's status line is drawn in the band, not the footer;
-  `handoff-wait` (the maintainer's cache clock) is the one exception kept in the footer.
+  `cache` (the maintainer's cache clock, `handoff-wait` until 24 Oct) is the one exception kept in the footer.
 - 2026-10-12: Stage hover never stops the crab. The label rides with it, stays 3 s after the
   pointer leaves, and uses theme ink (dark on light, light on dark) instead of crab orange.
   A label pinned where the pointer entered was dropped: CSS can't freeze it without drifting.
