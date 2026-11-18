@@ -1,5 +1,6 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { LINES } from './hooks/crab.ts'
+import { stageArt as sa, STATION as ST } from './hooks/art.ts'
 
 test('the crab perches above the prompt and follows the turn: reading, a failed command, done', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
@@ -53,8 +54,8 @@ test('the crab sits whole in the bar, beside the lines, one size up; no inner bo
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
-  // The only colour is the transcript's own, so no inner box shows against the bar.
-  expect((await m.find({ key: 'crab-band' }))?.props?.backgroundColor).toBe('userMessageBackground')
+  // No colour of its own: the app's band card shows through, gray like the other plugins' rows (Praj, 16 Nov).
+  expect((await m.find({ key: 'crab-band' }))?.props?.backgroundColor).toBeUndefined()
   // On the stage the crab itself is still drawn 52×41.
   expect(String((await m.find({ type: 'Svg' }))?.props?.source)).toContain('width="52" height="41"')
 })
@@ -62,20 +63,18 @@ test('the crab sits whole in the bar, beside the lines, one size up; no inner bo
 // Live check 22:07, 11 Oct: 0.4.7's floated fill still covered the crab and the lines in the app (the
 // lift boxes did not lift them). Nothing floats now: the fill is the crab's and the lines' own parent,
 // so they paint over it in plain document order.
-test('the bar reads the transcript colour edge to edge, with the crab and the lines inside the fill, nothing floated', async ($, on) => {
+test('the band card shows through: no paint, the crab and the lines inside the fill, nothing floated', async ($, on) => {
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
-  const band = await m.drawn() as never as El
+  const band = await m.find({ key: 'crab-band' }) as never as El
   expect(band.props?.key).toBe('crab-band')
-  // The app zeroes vertical margins down a single-child chain, but stops at a Box with a background.
-  expect(band.props?.backgroundColor).toBe('userMessageBackground')
+  // 16 Nov (Praj): the transcript-colour fill (11 Oct) read as a dark strip under 2.1.325's gray per-plugin rows.
+  expect(band.props?.backgroundColor).toBeUndefined()
   const [fill] = kids(band)
-  // Into the card's padding ((40px - 1lh)/2, 8px), with the same padding back so the content stays put.
-  // Overshoot above and sideways is clipped; below, it would scroll the band, so the bottom is exact.
   const p = fill?.props ?? {}
-  expect([p.key, p.backgroundColor, p.marginTop, p.paddingTop, p.marginBottom, p.paddingBottom, p.marginLeft, p.paddingLeft, p.marginRight, p.paddingRight])
-    .toEqual(['crab-fill', 'userMessageBackground', -2, 2, -1.16, 1.16, -2, 2, -2, 2])
+  expect([p.key, p.backgroundColor, p.marginTop, p.marginBottom, p.marginLeft, p.marginRight])
+    .toEqual(['crab-fill', undefined, undefined, undefined, undefined, undefined])
   const [text, buddy] = kids(fill)
   // Only the crab's hover label floats; the fill, the lines and the crab stay in flow.
   expect(JSON.stringify([band.props, p, text, kids(buddy)[0]])).not.toContain('"position"')
@@ -112,7 +111,7 @@ test('the crab stands at the bottom right, right on the prompt box, however many
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'a'), h(Text, {}, 'b'), h(Text, {}, 'c')) as never })
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
-  const [fill] = kids(await m.drawn() as never as El)
+  const [fill] = kids(await m.find({ key: 'crab-band' }) as never as El)
   expect(fill?.props?.alignItems).toBe('flex-end')
   expect(kids(fill).at(-1)?.props?.key).toBe('crab-buddy')
 })
@@ -348,4 +347,315 @@ test('compacting shows only when a compaction really runs: a vetoed one never sq
   gate = {}
   await $.session.compact({ trigger: 'auto', messages: msgs } as never)
   expect(seen[1]).toBe('Claude crab: comp')
+})
+
+// 0.12.0 S0 (Praj, 16 Nov): a standalone crab merges with the chat (the 11 Oct paint, transcript colour); when other
+// plugins draw beside it the app's gray rows show and the paint would be a dark strip.
+test('company decides the paint: alone the band is the transcript colour, beside other plugins it is unpainted', async ($, on) => {
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const alone = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  const band = await alone.find({ key: 'crab-band' }) as never as El
+  expect(band.props?.backgroundColor).toBe('userMessageBackground')
+  const [fill] = kids(band)
+  expect([fill?.props?.key, fill?.props?.backgroundColor, fill?.props?.marginTop, fill?.props?.paddingTop, fill?.props?.marginBottom, fill?.props?.paddingBottom, fill?.props?.marginLeft, fill?.props?.paddingLeft, fill?.props?.marginRight, fill?.props?.paddingRight])
+    .toEqual(['crab-fill', 'userMessageBackground', -2, 2, -1.16, 1.16, -2, 2, -2, 2])
+})
+
+test('company decides the paint: another plugin\'s card beside the crab means no paint at all', async ($, on) => {
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'other mod')) as never })
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  const band = await m.find({ key: 'crab-band' }) as never as El
+  expect(band.props?.backgroundColor).toBeUndefined()
+  expect([kids(band)[0]?.props?.backgroundColor, kids(band)[0]?.props?.marginTop, kids(band)[0]?.props?.paddingBottom]).toEqual([undefined, undefined, undefined])
+})
+
+// 0.12.0 S15 (Praj, 19 Nov, live in his main setup: the progress-bar row above the crab showed cut in half). The app
+// now asks each plugin for its own row, so another mod's card never reaches the crab's `rest`: the crab thought it was
+// alone, painted dark and reached 2 up over the row above. Company is read from the band's arrangement instead.
+const ROW_PROPS = { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 12, bodyColumns: 80 }
+const rowOf = (plugin: string) => ({ plugin, tree: { type: 'Box', props: {}, children: [] } })
+test('company from the band: another plugin\'s row in the band means no paint and no reach, though the crab\'s own row is alone', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 10, 19, 1, 0).getTime() })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  on('ui.render', ($$, e) => { if ((e as { component: string }).component === 'AbovePromptList') return { type: 'Box', props: {}, children: [] } as never; const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  await $.ui.render({ surface: 'desktop', component: 'AbovePromptList', props: { ...ROW_PROPS, rows: [rowOf('progress-bar'), rowOf('crab-buddy')] } } as never)
+  await clock.advance(10)
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  const band = await m.find({ key: 'crab-band' }) as never as El
+  expect(band.props?.backgroundColor).toBeUndefined()
+  const [fill] = kids(band)
+  expect([fill?.props?.backgroundColor, fill?.props?.marginTop, fill?.props?.paddingTop, fill?.props?.marginBottom]).toEqual([undefined, undefined, undefined, undefined])
+})
+
+test('company from the band: with only the crab\'s row it paints again, and the arrangement passes through untouched', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 10, 19, 1, 0).getTime() })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  on('ui.render', ($$, e) => { if ((e as { component: string }).component === 'AbovePromptList') return { type: 'Box', props: {}, children: [] } as never; const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const list = (rows: unknown[]) => $.ui.render({ surface: 'desktop', component: 'AbovePromptList', props: { ...ROW_PROPS, rows } } as never)
+  await list([rowOf('ponytail'), rowOf('crab-buddy')])
+  await clock.advance(10)
+  await list([rowOf('crab-buddy')])
+  await clock.advance(10)
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  const band = await m.find({ key: 'crab-band' }) as never as El
+  expect(band.props?.backgroundColor).toBe('userMessageBackground')
+  expect(kids(band)[0]?.props?.marginTop).toBe(-2)
+})
+
+// 0.12.0 S1: a crab error must never disturb a real tool call, turn or compaction.
+test('a crab that throws still lets the tool call through, untouched', async ($, on) => {
+  on('tool.call', () => ({ result: { ok: 1 } }) as never)
+  // The crab's own clock read fails: whatever it does with the call must not reach the call.
+  on('clock.now', () => { throw new Error('boom') })
+  const r = await $.tool.call({ tool: 'Bash', command: 'ls' } as never) as { result?: { ok?: number } }
+  expect(r.result?.ok).toBe(1)
+})
+
+test('a crab that throws still lets a permission request and a compaction through', async ($, on) => {
+  on('classic.PermissionRequest', () => ({ ok: 1 }) as never)
+  on('clock.now', () => { throw new Error('boom') })
+  const r = await $.classic.PermissionRequest({ tool_name: 'Bash' } as never) as { ok?: number }
+  expect(r.ok).toBe(1)
+})
+
+// 0.12.0 S3, end to end: edits during a turn become bricks while building, and the closing caption is the tally.
+test('honest numbers in the band: bricks equal files edited, and the turn ends with its tally as the newest caption', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  on('tool.call', () => ({ result: {} }) as never)
+  on('turn.complete', () => ({ text: 'ok' }) as never)
+  on('turn.start', (_$$, e) => ({ turnId: (e as { turnId?: string }).turnId ?? 't1' }) as never)
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const band = async () => JSON.stringify(await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).drawn())
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await $.tool.call({ tool: 'Edit', file_path: '/a.ts' } as never)
+  await $.tool.call({ tool: 'Write', file_path: '/b.ts' } as never)
+  await $.tool.call({ tool: 'Edit', file_path: '/a.ts' } as never)
+  await clock.advance(9_000)
+  // 2 files, 3 edits: two bricks on the wall.
+  expect((await band()).match(/class=\\"st-bk\\"/g)?.length).toBe(2)
+  await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false } as never)
+  await clock.advance(1_000)
+  expect(await band()).toContain('Done: 3 edits in 2 files, 9 s.')
+})
+
+test('honest numbers in the band: a second running subagent adds a mini crab without waiting for a new look', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
+  // The subagents stay running until released.
+  const held: (() => void)[] = []
+  on('tool.call', async () => { await new Promise<void>(r => held.push(r)); return { result: {} } as never })
+  on('turn.start', (_$$, e) => ({ turnId: (e as { turnId?: string }).turnId ?? 't1' }) as never)
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const minis = async () => JSON.stringify(await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).drawn()).match(/class=\\"st-mc\\"/g)?.length
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  const a = $.tool.call({ tool: 'Agent' } as never)
+  await clock.advance(9_000)
+  expect(await minis()).toBe(1)
+  const b = $.tool.call({ tool: 'Agent' } as never)
+  await clock.advance(1_000)
+  expect(await minis()).toBe(2)
+  held.forEach(r => r()); await Promise.all([a, b])
+})
+
+// 0.12.0 S4: the test switch. CRAB_SEASON forces a calendar look; unset it is off and the date decides.
+test('CRAB_SEASON forces a calendar look in the band, on any date', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 10, 18, 12, 0).getTime() })
+  mock.env(on, { CRAB_SEASON: 'christmas' })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  // The 1 s tick dresses the look; the render only reads it.
+  await clock.advance(1_000)
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  const svg = String((await m.find({ type: 'Svg' }))?.props?.source)
+  expect(svg).not.toBe(sa('idle', 0, ST.idle, 'Idle: waiting for your message', { subs: 0, files: 0 }))
+  expect(svg.startsWith('<svg')).toBe(true)
+  expect(String((await m.find({ type: 'Svg' }))?.props?.alt)).toBe('Claude crab: idle')
+})
+
+test('CRAB_SEASON unset: no calendar look on an ordinary Wednesday noon', async ($, on) => {
+  mock.clock(on, { now: new Date(2026, 10, 18, 12, 0).getTime() })
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+  // Idle with no season, exactly what the art draws plain (the walk-in is from the idle station).
+  expect(String((await m.find({ type: 'Svg' }))?.props?.source)).toBe(sa('idle', 0, ST.idle, 'Idle: waiting for your message', { subs: 0, files: 0 }))
+})
+
+import { projectKey } from './hooks/crab.ts'
+const memoryTime = new Date(2026, 10, 18, 12).getTime()
+const finishMemoryTurn = async ($: any) => $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false })
+const memoryBand = async ($: any) => JSON.stringify(await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } })).drawn())
+const memoryCore = (on: any) => {
+  on('session.start', () => ({ cwd: '/memory-project' }))
+  on('turn.start', () => ({ turnId: 't1' }))
+  on('turn.complete', () => ({ text: 'ok' }))
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($: any, e: any) => { const { Box } = $.ui.resolve(e); return h(Box, {}) })
+}
+
+test('project memory reads once at start, greets first, writes one private counter record per main turn without double counting', async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, {})
+  const key = projectKey('/memory-project')
+  memoryCore(on)
+  const gets: string[] = [], sets: any[] = []
+  on('store.get', { key }, async (_$, e, next) => { gets.push(e.key); return next(e) })
+  on('store.set', { key }, async (_$, e, next) => { sets.push(e); return next(e) })
+  mock.store(on, { [key]: { v: 1, sessions: 6, lastAt: 1, green: 12, red: 2, edits: 42, lastTrait: 'builder' } })
+  await $.session.start({ cwd: '/memory-project' } as never)
+  expect(await memoryBand($)).toContain('Session 7 on this project. Welcome back.')
+  expect(sets.length).toBe(0)
+  await $.turn.start({ text: 'private prompt', turnId: 't1' } as never)
+  await $.tool.call({ tool: 'Edit', file_path: '/private/name' } as never)
+  await $.tool.call({ tool: 'Bash', command: 'npm test' } as never)
+  await finishMemoryTurn($)
+  await $.turn.start({ text: 'again', turnId: 't1' } as never)
+  await $.tool.call({ tool: 'Edit', file_path: '/private/name' } as never)
+  await finishMemoryTurn($)
+  expect(gets).toEqual([key])
+  expect(sets.length).toBe(2)
+  expect(sets[1]).toEqual({ key, value: { v: 1, sessions: 7, lastAt: memoryTime, green: 13, red: 2, edits: 44 } })
+  expect(JSON.stringify(sets)).not.toMatch(/private|memory-project|prompt/)
+  await $.turn.complete({ agentId: 'child' } as never)
+  expect(sets.length).toBe(2)
+})
+
+test('new project keeps the normal first caption and writes versioned counters', async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, {}); memoryCore(on)
+  let stored: unknown
+  on('store.set', { key: projectKey('/memory-project') }, async (_$, e, next) => { stored = e.value; return next(e) })
+  mock.store(on)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  expect(await memoryBand($)).toContain(LINES.idle[0])
+  await finishMemoryTurn($)
+  expect(stored).toEqual({ v: 1, sessions: 1, lastAt: memoryTime, green: 0, red: 0, edits: 0 })
+})
+
+test('CRAB_MEMORY off never touches the store', async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, { CRAB_MEMORY: 'off' }); memoryCore(on)
+  let calls = 0
+  for (const event of ['store.get', 'store.set', 'store.keys', 'store.delete'] as const) on(event, () => { calls++; throw new Error('disabled') })
+  await $.session.start({ cwd: '/memory-project' } as never); await finishMemoryTurn($)
+  expect(calls).toBe(0)
+  expect(await memoryBand($)).not.toContain('Welcome back')
+})
+
+for (const event of ['store.get', 'store.set', 'store.keys', 'store.delete'] as const) test(`${event} failure is silent and turns still finish`, async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, {})
+  let thrown = 0
+  on('store.*', (_$, e, next) => {
+    if (next.event === event) { thrown++; throw new Error('private store failure') }
+    return next(e)
+  })
+  mock.store(on, Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`p:${i}`, { v: 1, sessions: 1, lastAt: i, green: 0, red: 0, edits: 0 }])))
+  memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  expect((await finishMemoryTurn($) as any).text).toBe('ok')
+  expect(thrown).toBe(1)
+  await finishMemoryTurn($)
+  expect(thrown).toBe(1) // failure disables memory for the rest of this session
+  expect(await memoryBand($)).not.toContain('private store failure')
+})
+
+test('project memory prunes the oldest lastAt at 200 and leaves unrelated keys alone', async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, {})
+  const deleted: string[] = []
+  let keys: string[] = []
+  on('store.*', async (_$, e, next) => {
+    if (next.is('store.delete', e)) deleted.push(e.key)
+    const result = await next(e)
+    if (next.event === 'store.keys') keys = (result as { value: string[] }).value
+    return result
+  })
+  mock.store(on, { unrelated: 'keep', ...Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`p:${i}`, { v: 1, sessions: 1, lastAt: 200 - i, green: 0, red: 0, edits: 0 }])) })
+  memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never); await finishMemoryTurn($)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  expect(keys.filter(k => k.startsWith('p:')).length).toBe(200)
+  expect(deleted).toEqual(['p:199'])
+  expect(keys).not.toContain('p:199')
+  expect(keys).toContain('unrelated')
+})
+
+test('session trait flows to idle and done art and a quarter of captions, with terminal props unchanged', async ($, on) => {
+  const clock = mock.clock(on, { now: memoryTime }); mock.env(on, { CRAB_MEMORY: 'off' }); memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  await $.turn.start({ text: 'build', turnId: 't1' } as never)
+  for (let i = 0; i < 15; i++) await $.tool.call({ tool: 'Edit', file_path: '/a' } as never)
+  await finishMemoryTurn($)
+  expect(await memoryBand($)).toContain('cb-trait-builder')
+  expect(await memoryBand($)).toContain('15 edits')
+  await clock.advance(9_000)
+  expect(await memoryBand($)).toContain('cb-trait-builder')
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, bodyColumns: 80 } as never })
+  const terminal = kids(await m.find({ key: 'crab-band' }) as El).at(-1)
+  expect((terminal?.props?.props as any).trait).toBeUndefined()
+})
+
+test('a returning project greeting is first even when the session opens at night', async ($, on) => {
+  const now = new Date(2026, 10, 18, 1).getTime()
+  mock.clock(on, { now }); mock.env(on, {})
+  mock.store(on, { [projectKey('/memory-project')]: { v: 1, sessions: 6, lastAt: 1, green: 12, red: 0, edits: 42 } })
+  memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  expect(await memoryBand($)).toContain('Session 7 on this project. Welcome back.')
+  expect(await memoryBand($)).toContain('Claude crab: night')
+  const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false, bodyColumns: 80 } as never })
+  expect(kids(await m.find({ key: 'crab-text' }) as El)[0]?.children?.[0]).toBe('Session 7 on this project. Welcome back.')
+})
+
+test('a session earned trait is stored with counters and malformed project data is ignored', async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, {})
+  let stored: any
+  on('store.set', { key: projectKey('/memory-project') }, async (_$, e, next) => { stored = e.value; return next(e) })
+  mock.store(on, { [projectKey('/memory-project')]: { v: 1, sessions: 'bad', lastTrait: 'private prompt' } })
+  memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  expect(await memoryBand($)).not.toContain('Welcome back')
+  await $.turn.start({ text: 'tests', turnId: 't1' } as never)
+  for (let i = 0; i < 5; i++) await $.tool.call({ tool: 'Bash', command: 'npm test' } as never)
+  await finishMemoryTurn($)
+  expect(stored).toEqual({ v: 1, sessions: 1, lastAt: memoryTime, green: 5, red: 0, edits: 0, lastTrait: 'tester' })
+})
+
+test('pruning follows lastAt even if the clock moved back and the current project is oldest', async ($, on) => {
+  mock.clock(on, { now: memoryTime }); mock.env(on, {})
+  const deleted: string[] = []
+  on('store.delete', { key: projectKey('/memory-project') }, async (_$, e, next) => { deleted.push(e.key); return next(e) })
+  mock.store(on, Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`p:${i}`, { v: 1, sessions: 1, lastAt: memoryTime + i + 1, green: 0, red: 0, edits: 0 }])))
+  memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never); await finishMemoryTurn($)
+  expect(deleted).toEqual([projectKey('/memory-project')])
+})
+
+// S14: a running idle look changes scenes without a mood event; its caption must follow.
+import { take as calendarTakeForTest, START as calendarStart, CALENDAR_LINES as sceneCaptions } from './hooks/crab.ts'
+test('calendar scene changes refresh the caption and remove lines belonging to the previous prop', async ($, on) => {
+  const start = new Date(2026, 10, 21, 12).getTime()
+  const clock = mock.clock(on, { now: start })
+  mock.env(on, { CRAB_SEASON: 'weekend' })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'card')) as never })
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  let elapsed = 0, saw = new Set<string>()
+  for (let i = 0; i < 14; i++) {
+    await clock.advance(42_000); elapsed += 42_000
+    const t = calendarTakeForTest({ ...calendarStart, lastActive: start }, start + elapsed, 'idle', 'weekend')
+    const mount = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+    for (let scene = 0; scene < 7; scene++) for (const line of sceneCaptions.weekend[scene]) {
+      const captions = kids(await mount.find({ key: 'crab-text' }) as El).flatMap(child => child.children ?? [])
+      const present = captions.includes(line)
+      if (present) { expect(t).toBe(4 + scene); saw.add(line) }
+    }
+  }
+  expect(saw.size).toBeGreaterThanOrEqual(6)
 })

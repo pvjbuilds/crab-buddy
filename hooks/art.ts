@@ -1,3 +1,5 @@
+import { calendarSceneArt } from './calendar-scenes.ts'
+import { petLine, type Season } from './crab.ts'
 // The crab from Claude's new-session screen, drawn on the 30×28 grid of _shared/crab.ts (crabBody), with
 // one prop and one CSS motion per mood. Pure CSS, run by the compositor: no redraws while it plays.
 // Approved in two previews on 11 Oct 2026 (9 base states + 14 extras). Every motion eases at the screen
@@ -68,6 +70,12 @@ const CSS = `<style>
 .cb-fixed .cb-all{animation:cb-jump .8s ease-out infinite}
 @keyframes cb-cf{0%{transform:translateY(-6px);opacity:1}100%{transform:translateY(8px);opacity:0}}
 .cb-night .cb-moon{animation:cb-bl 3s ease-in-out infinite}
+.cb-browse .cb-motion{animation:cb-browse-move 2s ease-in-out infinite}@keyframes cb-browse-move{50%{transform:translate(-1px,-1px)}}
+.cb-mcp .cb-motion{animation:cb-mcp-move 2s ease-in-out infinite}@keyframes cb-mcp-move{50%{transform:translate(-1px,-1px)}}
+.cb-plan .cb-motion{animation:cb-plan-move 2s ease-in-out infinite}@keyframes cb-plan-move{50%{transform:translate(-1px,-1px)}}
+.cb-skill .cb-motion{animation:cb-skill-move 2s ease-in-out infinite}@keyframes cb-skill-move{50%{transform:translate(-1px,-1px)}}
+.cb-sync .cb-motion{animation:cb-sync-move 2s ease-in-out infinite}@keyframes cb-sync-move{50%{transform:translate(-1px,-1px)}}
+.cb-ship .cb-motion{animation:cb-ship-move 2s ease-in-out infinite}@keyframes cb-ship-move{50%{transform:translate(-1px,-1px)}}
 /* Three more takes a mood (Praj, 12 Oct), class cb-MOODn; take 0 is the mood class above. */
 .cb-idle1 .cb-bd{animation:cb-bob 2s ease-in-out infinite}.cb-idle1 .cb-n1{animation:cb-zz 2.4s ease-out infinite}.cb-idle1 .cb-n2{animation:cb-zz 2.4s ease-out infinite -1.2s}
 .cb-idle2 .cb-bd{transform-origin:50% 100%;animation:cb-tall 4s ease-in-out infinite}.cb-idle2 .cb-ey{transform-origin:50% 50%;animation:cb-squint 4s ease-in-out infinite}.cb-idle2 .cb-ar{animation:cb-reach 4s ease-in-out infinite}
@@ -219,6 +227,10 @@ const CSS = `<style>
 .cb-gear1 .cb-cab{transform-origin:50% 0;animation:cb-cable 3s ease-in-out infinite}.cb-gear1 .cb-blk{animation:cb-hoist 3s ease-in-out infinite}
 .cb-gear1 .cb-ey{transform:translate(-1px,-1px)}.cb-gear1 .cb-ar{animation:cb-arm 3s ease-in-out infinite}
 @keyframes cb-cable{0%,100%{transform:scaleY(1)}50%{transform:scaleY(3)}}@keyframes cb-hoist{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+/* Result appears immediately; 5.72% of 14 s is a .8008 s reaction hold. */
+.cb-testp .cb-ar{animation:cb-result-arm 14s ease-in-out infinite}.cb-testf .cb-ar{animation:cb-result-arm 14s ease-in-out infinite}
+.cb-testp .cb-pr{animation:none}.cb-testf .cb-pr{animation:none}
+@keyframes cb-result-arm{0%,5.72%{transform:none}7%{transform:translateY(1px)}8%,15%{transform:translateY(-3px)}17%,100%{transform:none}}
 @media (prefers-reduced-motion:reduce){.cb *{animation:none!important}}
 </style>`
 
@@ -250,6 +262,12 @@ const GEAR = g('cb-g1', r(-4, 15, 5, 5, G) + r(-3, 13, 3, 2, '#B4B2A9') + r(-3, 
 
 // [prop drawn on the body, extra drawn beside the crab, claw height (14 = resting)]
 const LOOK: Partial<Record<Mood, [string, string?, number?]>> = {
+  browse: ['', r(-6, 10, 9, 8, I) + r(-5, 11, 7, 6, G) + g('cb-motion', r(-4, 12, 1, 4, CREAM) + r(-3, 13, 2, 1, CREAM) + r(-2, 14, 1, 2, CREAM)) + r(-3, 18, 2, 2, B)],
+  mcp: ['', r(-6, 12, 4, 7, G) + r(-5, 14, 2, 3, I) + g('cb-motion', r(-2, 15, 4, 1, B) + r(1, 14, 2, 3, G) + r(2, 15, 2, 1, I))],
+  plan: ['', r(-6, 9, 8, 13, B) + r(-5, 10, 6, 11, CREAM) + r(-3, 8, 2, 2, G) + r(-4, 12, 1, 1, G) + r(-2, 12, 2, 1, G) + r(-4, 16, 1, 1, G) + g('cb-motion', r(-4, 16, 1, 2, Y) + r(-3, 15, 1, 2, Y))],
+  skill: ['', g('cb-motion', r(-4, 8, 1, 2, Y) + r(-6, 10, 2, 1, Y) + r(1, 9, 2, 1, Y)) + r(-6, 15, 4, 6, B) + r(-2, 14, 4, 7, B) + r(-5, 15, 3, 5, CREAM) + r(-2, 15, 3, 5, CREAM) + r(-2, 15, 1, 6, G)],
+  sync: ['', r(-5, 9, 1, 12, G) + r(1, 9, 1, 5, G) + r(0, 14, 1, 2, G) + r(-1, 16, 1, 2, G) + r(-2, 18, 1, 1, G) + r(-4, 18, 2, 1, G) + g('cb-motion', r(-6, 10, 3, 2, Y) + r(0, 10, 3, 2, Y))],
+  ship: ['', r(-6, 24, 2, 2, G) + r(-4, 22, 2, 2, G) + r(-2, 20, 2, 2, G) + r(0, 18, 2, 2, G) + g('cb-motion', r(-5, 15, 6, 6, B) + r(-4, 16, 4, 4, CREAM) + r(-3, 16, 1, 4, B))],
   read: [r(25, 6, 4, 1, G) + r(24, 7, 1, 3, G) + r(29, 7, 1, 3, G) + r(25, 10, 4, 1, G) + r(25, 7, 4, 3, 'rgba(169,214,245,.6)') + r(24, 11, 2, 3, B), '', 10],
   build: ['', BUILD],
   saw: ['', SAW],
@@ -271,6 +289,7 @@ const LOOK: Partial<Record<Mood, [string, string?, number?]>> = {
   night: [r(6, 6, 18, 3, '#3C3489') + r(9, 4, 12, 2, '#3C3489') + r(13, 2, 6, 2, '#3C3489') + r(19, 1, 3, 3, '#F4F3EE'), g('cb-moon', r(-3, 2, 3, 3, '#FAC775') + r(-4, 3, 1, 2, '#FAC775'))],
 }
 // The three extra takes of each mood (Praj, 12 Oct): a prop on the body, a set beside it, a claw height.
+const FUR = '#C3CBD6'  // costume white: near-white vanishes on the light theme (seen in Chromium, 17 Nov)
 const GRN = '#1D9E75', RED = '#E24B4A', BLU = '#378ADD', WH = '#F4F3EE', LG = '#B4B2A9', DK = '#2C2C2A', ORG = '#EF9F27'
 const PINK = '#D4537E', SKY = '#85B7EB', WOOD = '#C8A165', GLASS = 'rgba(200,220,235,.35)'
 const mini = (cls: string, x: number, y: number, s: number) => g(cls, `<g style="transform-box:view-box" transform="translate(${x},${y}) scale(${s})">${r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O) + r(23, 14, 4, 4, O) + r(9, 12, 2, 2, I) + r(19, 12, 2, 2, I) + r(7, 22, 2, 4, O) + r(11, 22, 2, 4, O) + r(17, 22, 2, 4, O) + r(21, 22, 2, 4, O)}</g>`)
@@ -284,7 +303,49 @@ const WEB_GLOBE = r(-4, 10, 6, 8, BLU) + r(-5, 11, 8, 6, BLU) + g('cb-p1', r(-4,
 const WEB_WAVE = r(-6, 27, 38, 1, BLU) + g('cb-wa', r(-6, 22, 6, 5, BLU) + r(-5, 20, 3, 2, BLU) + r(-4, 19, 2, 1, WH))
 const bird = (cls: string) => g(cls, r(14, 3, 1, 1, WH) + r(15, 4, 1, 1, WH) + r(16, 3, 1, 1, WH))
 
+// Authored calendar props use y >= 8: (8 + 2) * 41/30 = 13.67 stage pixels.
+const SHADES = g('cb-shades', r(8, 12, 5, 3, I) + r(13, 12, 5, 1, I) + r(18, 12, 5, 3, I))
+const DRINK = g('cb-sip-mouth', r(17, 16, 2, 1, I)) + g('cb-sip', r(24, 17, 4, 6, SKY) + r(24, 22, 4, 1, FUR)
+  + g('cb-straw', r(25, 17, 1, 4, B) + r(21, 17, 5, 1, B)))
+const CLOCK = g('cb-clock', r(-6, 8, 9, 9, B) + r(-5, 9, 7, 7, FUR)
+  + r(-2, 9, 1, 1, I) + r(1, 12, 1, 1, I)
+  + r(-1, 13, 1, 1, I) + r(0, 14, 1, 1, I)
+  + g('cb-clock-hand', r(-2, 9, 1, 4, I)))
+const BEACH = g('cb-chair', r(5, 18, 1, 8, B) + r(6, 21, 19, 2, FUR) + r(23, 23, 1, 3, B))
+  + g('cb-cooler', r(-5, 20, 7, 6, SKY) + r(-5, 19, 7, 1, FUR) + r(-3, 21, 3, 1, I))
+// MON in the same letters as SUN (17 Nov, in Chromium: a pixel M with a tiny ON beside it stuck out past the SUN page).
+const CALENDAR = g('cb-calendar', r(-6, 12, 9, 10, B) + r(-5, 13, 8, 9, FUR)
+  + g('cb-mon-page', `<text x="-4.7" y="19" font-family="sans-serif" font-size="3.3" fill="${I}">MON</text>`)
+  + g('cb-sun-page', r(-5, 13, 8, 9, FUR) + `<text x="-4.5" y="19" font-family="sans-serif" font-size="3.3" fill="${I}">SUN</text>`))
+const ALARM = g('cb-alarm', r(23, 22, 7, 4, BLU) + r(23, 20, 2, 2, B) + r(28, 20, 2, 2, B)
+  + r(24, 22, 5, 3, FUR) + g('cb-alarm-hand', r(26, 22, 1, 3, I)))
+const FIREWORK = g('cb-rocket', r(-2, 23, 1, 3, Y)) + g('cb-firework',
+  r(-2, 11, 1, 3, Y) + r(-2, 17, 1, 3, Y) + r(-6, 15, 3, 1, ORG) + r(0, 15, 3, 1, ORG)
+  + r(-5, 12, 1, 1, PINK) + r(1, 12, 1, 1, PINK) + r(-5, 18, 1, 1, BLU) + r(1, 18, 1, 1, BLU))
+
 const TAKE: Record<string, [string, string?, number?]> = {
+  idle_friday: [SHADES + DRINK, CLOCK],
+  done_friday: [SHADES + DRINK + g('cb-briefcase', r(25, 18, 5, 4, B) + r(26, 17, 3, 1, G)), CLOCK],
+  idle_weekend: [SHADES + DRINK, BEACH],
+  doze_weekend: [SHADES + DRINK, BEACH],
+  done_weekend: [SHADES + DRINK, BEACH],
+  idle_sundayNight: [g('cb-sigh', r(23, 17, 3, 1, FUR)), CALENDAR + ALARM],
+  done_sundayNight: [g('cb-sigh', r(23, 17, 3, 1, FUR)), CALENDAR + ALARM],
+  browse1: ['', g('cb-long-page', r(-6, 8, 9, 17, FUR) + r(-5, 9, 6, 14, CREAM)
+    + g('cb-page-lines', [10, 13, 16, 19, 22].map(y => r(-4, y, 4, 1, G)).join(''))
+    + r(1, 9, 1, 14, G) + g('cb-scrollbar', r(1, 9, 1, 4, BLU)))],
+  mcp1: ['', g('cb-sockets', r(-6, 14, 10, 7, G) + [0, 1, 2].map(i =>
+    r(-5 + i * 3, 15, 2, 4, I) + g(`cb-socket${i + 1}`, r(-5 + i * 3, 15, 2, 2, GRN))).join(''))],
+  plan1: ['', g('cb-pinboard', r(-6, 8, 10, 16, B) + r(-5, 9, 8, 14, WOOD)
+    + g('cb-note1', r(-5, 10, 4, 5, Y) + r(-4, 10, 1, 1, RED))
+    + g('cb-note2', r(-1, 17, 4, 5, SKY) + r(0, 17, 1, 1, RED)))],
+  skill1: ['', r(-6, 8, 9, 2, B) + g('cb-scroll', r(-5, 10, 7, 13, CREAM)
+    + r(-4, 12, 5, 1, B) + r(-4, 15, 4, 1, B) + r(-4, 18, 5, 1, B) + r(-6, 23, 9, 2, B))
+    + g('cb-scroll-spark', r(-2, 12, 1, 5, Y) + r(-4, 14, 5, 1, Y))],
+  sync1: ['', g('cb-arrows', r(-5, 11, 7, 2, BLU) + r(0, 9, 2, 2, BLU) + r(0, 13, 2, 2, BLU)
+    + r(-5, 19, 7, 2, GRN) + r(-5, 17, 2, 2, GRN) + r(-5, 21, 2, 2, GRN))],
+  ship1: ['', g('cb-delivery', g('cb-parachute', r(-6, 8, 9, 2, SKY) + r(-5, 10, 1, 5, G) + r(1, 10, 1, 5, G))
+    + g('cb-crate', r(-5, 15, 7, 7, B) + r(-4, 16, 5, 5, WOOD) + r(-2, 15, 1, 7, Y)))],
   idle1: [r(14, 17, 2, 2, I) + g('cb-n1', note(24, 5)) + g('cb-n2', note(27, 3))],
   idle2: [''],
   idle3: ['', g('cb-bf', g('cb-wg', r(-5, 6, 2, 2, Y) + r(-2, 6, 2, 2, Y)) + r(-3, 6, 1, 3, B))],
@@ -433,18 +494,91 @@ function scene(mood: Mood, key: string): { css: string, wrap: (body: string) => 
   return { css, wrap: b => `${g('cb-act1', g('cb-act2', b))}${g('cb-em1', EMOTE[face[0]])}${g('cb-em2', EMOTE[face[1]])}` }
 }
 
+// One clock per story. Body settles first; the claw follows .28 s later.
+const AUTHORED = new Set(['idle_friday', 'done_friday', 'idle_weekend', 'doze_weekend', 'done_weekend',
+  'idle_sundayNight', 'done_sundayNight', 'browse1', 'mcp1', 'plan1', 'skill1', 'sync1', 'ship1'])
+function acting(key: string, extra = ''): string {
+  const anim = (selector: string, name: string, frames: string, timing = 'ease-in-out') =>
+    `.cb-authored ${selector}{animation:${name} 14s ${timing} infinite}@keyframes ${name}{${frames}}`
+  let css = '.cb-authored .cb-mo{display:none}.cb-authored .cb-all,.cb-authored .cb-ar,.cb-authored .cb-bd,.cb-authored .cb-ey,.cb-authored .cb-pr{animation:none}'
+  css += anim('.cb-bd', 'cb-windup', '0%,32%,46%,70%,84%,100%{transform:none}33%,71%{transform:translateY(1px)}35%,44%,73%,82%{transform:translateX(-1px)}')
+    + anim('.cb-ar', 'cb-follow', '0%,34%,48%,72%,86%,100%{transform:none}36%,46%,74%,84%{transform:translateY(-2px)}')
+    + anim('.cb-ey', 'cb-reaction', '0%,34%,46%,100%{transform:none}36%,44%{transform:translateX(-2px)}72%,82%{transform:translateX(-1px)}')
+  if (key.endsWith('_friday') || key.endsWith('_weekend')) css += anim('.cb-sip-mouth', 'cb-sip-mouth', '0%,76%,94%,100%{opacity:0}79%,90%{opacity:1}')
+  if (key.endsWith('_friday')) css +=
+    anim('.cb-clock-hand', 'cb-five', '0%,20%{transform:rotate(-60deg)}21%,34%{transform:rotate(-30deg)}35%,70%{transform:rotate(-15deg)}72%,100%{transform:rotate(0)}', 'steps(1)')
+    + '.cb-clock-hand{transform-origin:50% 100%}'
+    + anim('.cb-shades', 'cb-shades-drop', '0%,70%{transform:translateY(-4px);opacity:0}72%,100%{transform:none;opacity:1}')
+    + anim('.cb-sip', 'cb-friday-sip', '0%,75%,100%{transform:none}79%,90%{transform:translate(-3px,-1px)}')
+    + anim('.cb-briefcase', 'cb-case-toss', '0%,32%{transform:none;opacity:1}33%{transform:translateY(1px);opacity:1}36%{transform:translate(-5px,-4px);opacity:1}44%,100%{transform:translate(-24px,4px);opacity:0}')
+  if (key.endsWith('_sundayNight')) css +=
+    '.cb-sun-page{transform-origin:50% 0}'
+    + anim('.cb-sun-page', 'cb-monday', '0%,32%{transform:scaleY(1)}35%,100%{transform:scaleY(0)}')
+    + anim('.cb-ar', 'cb-alarm-reach', '0%,70%,86%,100%{transform:none}72%{transform:translate(1px,2px)}74%,76%{transform:translate(3px,6px)}78%,84%{transform:translateY(2px)}')
+    + anim('.cb-sigh', 'cb-sunday-sigh', '0%,45%,55%,100%{opacity:0;transform:none}47%{opacity:1;transform:none}53%{opacity:0;transform:translate(3px,1px)}')
+    + anim('.cb-alarm-hand', 'cb-set-alarm', '0%,71%{transform:none}74%,100%{transform:rotate(90deg)}', 'steps(1)')
+    + '.cb-alarm{transform-origin:50% 100%}'
+    + anim('.cb-alarm', 'cb-ring-once', '0%,77%,84%,100%{transform:none}78%{transform:rotate(-12deg)}80%{transform:rotate(12deg)}82%{transform:rotate(-6deg)}')
+  if (key.endsWith('_weekend')) css +=
+    '.cb-recline{transform-origin:50% 100%}'
+    + anim('.cb-recline', 'cb-chair-lean', '0%,32%,100%{transform:none}33%{transform:translateY(1px)}36%,94%{transform:translate(-2px,0) rotate(-8deg)}')
+    + anim('.cb-sip', 'cb-weekend-sip', '0%,70%,100%{transform:none}78%,90%{transform:translate(-3px,-1px)}')
+  if (key === 'browse1') css += anim('.cb-scrollbar', 'cb-page-scroll', '0%,34%{transform:none}38%,70%{transform:translateY(4px)}74%,100%{transform:translateY(10px)}')
+    + anim('.cb-page-lines', 'cb-page-content', '0%,34%{transform:none}38%,70%{transform:translateY(-1px)}74%,100%{transform:translateY(-2px)}')
+  if (key === 'mcp1') for (let i = 1; i <= 3; i++) css += anim(`.cb-socket${i}`, `cb-connect${i}`, `0%,${i === 3 ? 71 : 30 + i * 3}%{opacity:.15}${i === 3 ? 74 : 33 + i * 3}%,100%{opacity:1}`)
+  if (key === 'plan1') for (let i = 1; i <= 2; i++) css += anim(`.cb-note${i}`, `cb-pin-note${i}`, `0%,${i === 1 ? 33 : 71}%{opacity:0;transform:translate(3px,2px)}${i === 1 ? 36 : 74}%,100%{opacity:1;transform:none}`)
+  if (key === 'skill1') css += '.cb-scroll{transform-origin:50% 0}'
+    + anim('.cb-scroll', 'cb-skill-unroll', '0%,32%{transform:scaleY(.15)}38%,100%{transform:scaleY(1)}')
+    + anim('.cb-scroll-spark', 'cb-skill-spark', '0%,71%,84%,100%{opacity:0}74%,82%{opacity:1}')
+  if (key === 'sync1') css += '.cb-arrows{transform-origin:50% 50%}'
+    + anim('.cb-arrows', 'cb-sync-circle', '0%,34%{transform:rotate(0)}40%,70%{transform:rotate(180deg)}76%,100%{transform:rotate(360deg)}')
+  if (key === 'ship1') css += anim('.cb-delivery', 'cb-crate-land', '0%,32%{transform:none}40%,100%{transform:translateY(4px)}')
+    + '.cb-parachute{transform-origin:50% 100%}'
+    + anim('.cb-parachute', 'cb-chute-fold', '0%,70%{transform:none}76%,100%{transform:scaleY(.15)}')
+  if (key === 'newYear') css +=
+    '.cb-firework{transform-origin:50% 50%}'
+    + '.cb-launch .cb-rocket{animation:cb-rocket-rise 5s ease-out 1 both}.cb-launch .cb-firework{animation:cb-firework-burst 5s ease-out 1 both}'
+    + '.cb-launch *{animation-delay:inherit!important}'
+    + '@keyframes cb-rocket-rise{0%,10%{opacity:0;transform:none}20%{opacity:1;transform:none}35%{opacity:1;transform:translateY(-10px)}36%,100%{opacity:0;transform:translateY(-10px)}}'
+    + '@keyframes cb-firework-burst{0%,35%{opacity:0;transform:scale(.1)}40%,55%{opacity:1;transform:scale(.9)}75%,100%{opacity:0;transform:scale(1)}}'
+  // No opacity:0 defaults: stills retain the result and every meaningful prop.
+  return css + extra + '@media (prefers-reduced-motion:reduce){.cb-authored *{animation:none!important}.cb-authored .cb-sun-page{display:none}.cb-authored .cb-shades{transform:none}}'
+}
+
 /** One standalone SVG of the crab acting out take `t` of `mood` (0 is the mood's first look). */
-export function crabArt(mood: Mood, t = 0): string {
-  const key = t ? `${mood}${t}` : mood
-  const [prop = '', beside = '', armY = 14] = (t ? TAKE[key] : LOOK[mood]) ?? []
+export function crabArt(mood: Mood, t = 0, season?: Season, year?: number, trait?: import('../types').Trait): string {
+  const items = {
+    tester: r(8, 11, 6, 4, BLU) + r(17, 11, 6, 4, BLU) + r(14, 12, 3, 1, G),
+    builder: r(6, 9, 18, 2, Y) + r(9, 8, 12, 2, Y) + r(14, 8, 2, 2, ORG),
+    reader: r(8, 11, 6, 4, I) + r(9, 12, 4, 2, FUR) + r(17, 11, 6, 4, I) + r(18, 12, 4, 2, FUR) + r(14, 12, 3, 1, I),
+    surfer: r(6, 10, 2, 7, G) + r(23, 10, 2, 7, G) + r(7, 9, 17, 1, G) + r(24, 8, 1, 3, G) + r(24, 8, 2, 1, BLU),
+    manager: '<path d="M10 17 L15 21 L20 17" fill="none" stroke="' + I + '" stroke-width="1"/>' + r(14, 20, 4, 2, Y),
+    fixer: r(17, 17, 6, 3, FUR) + r(19, 18, 2, 1, ORG),
+  }
+  const item = trait && (mood === 'idle' || mood === 'done') && season !== 'christmas' && season !== 'newYear'
+    ? `<g class="cb-trait cb-trait-${trait}">${items[trait]}</g>` : ''
+  const calendarKey = `${mood}_${season}`
+  const calendar = t >= 4 && t <= 10 && TAKE[calendarKey]
+  const extra = calendar && t > 4 ? calendarSceneArt(season as 'friday' | 'weekend' | 'sundayNight', t - 4) : undefined
+  const key = calendar ? `${calendarKey}${t === 4 ? '' : t - 4}` : t ? `${mood}${t}` : mood
+  const entry: [string, string?, number?] | undefined = extra ? [extra.prop, extra.beside] : (t ? TAKE[key] : LOOK[mood])
+  const [prop = '', beside = '', armY = 14] = entry ?? []
   const eyes = mood === 'doze' ? r(9, 14, 2, 1, I) + r(19, 14, 2, 1, I) : r(9, 12, 2, 2, I) + r(19, 12, 2, 2, I)
   const mouth = key === 'idle' ? g('cb-mo', r(13, 17, 4, 3, I)) : ''
   const z = key === 'doze' ? '<text class="cb-z" x="24" y="8">z</text>' : ''
-  const sc = scene(mood, key)
+  const hat = season === 'christmas' ? r(11, 9, 10, 1, FUR) + r(12, 7, 8, 2, RED) + r(13, 5, 6, 2, RED) + r(15, 4, 4, 1, RED) + r(19, 4, 2, 2, FUR)
+    : season === 'newYear' ? g('cb-party-hat', r(12, 9, 8, 1, Y) + r(13, 7, 6, 2, BLU) + r(14, 5, 4, 2, Y) + r(15, 3, 2, 2, BLU) + r(15, 2, 2, 1, Y)) : ''
+  const weekday = !calendar && season && TAKE[calendarKey] ? (season === 'sundayNight' ? r(14, 18, 2, 4, BLU) : SHADES) : ''
+  const festive = season === 'newYear' && mood === 'idle' && year ? `<text class="cb-year" x="-5.5" y="5" font-family="sans-serif" font-size="4" fill="${ORG}">${year}</text>`
+    : season === 'newYear' && mood === 'done' ? `<g class="cb-launch">${FIREWORK}</g><g class="cb-launch" style="animation-delay:5s">${FIREWORK}</g>` : ''
+  const snow = season === 'christmas' && mood === 'idle' ? '<g class="cb-snow">' + r(-4, 8, 1, 1, FUR) + r(25, 10, 1, 1, FUR) + '</g>' : ''
+  const authored = !!extra || AUTHORED.has(key) || season === 'newYear' && (mood === 'idle' || mood === 'done')
+  const sc = authored ? { css: acting(season === 'newYear' ? 'newYear' : key, extra?.css), wrap: (b: string) => key.endsWith('_weekend') ? g('cb-recline', b) : b } : scene(mood, key)
+  if (snow) sc.css += '.cb-snow{animation:cb-snowfall 3s linear infinite}@keyframes cb-snowfall{to{transform:translateY(16px)}}'
   // The scene's beats join the one style block, ahead of the reduced-motion rule that stills them too.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="30" viewBox="-6 -2 38 30" shape-rendering="crispEdges">${CSS.replace('@media', `${sc.css}@media`)}`
-    + `<g class="cb cb-${key}${WALKS.has(key) ? ' cb-walk' : ''}">${beside}${sc.wrap(`<g class="cb-all"><g class="cb-bd">${r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O)}`
-    + `${g('cb-ey', eyes)}${mouth}${g('cb-ar', r(23, armY, 4, 4, O))}${g('cb-pr', prop)}</g>`
+    + `<g class="cb cb-${key}${authored ? ' cb-authored' : ''}${WALKS.has(key) ? ' cb-walk' : ''}">${beside}${weekday}${festive}${snow}${sc.wrap(`<g class="cb-all"><g class="cb-bd">${r(7, 10, 16, 12, O) + r(3, 14, 4, 4, O)}`
+    + `${hat}${item}${g('cb-ey', eyes)}${mouth}${g('cb-ar', r(23, armY, 4, 4, O))}${g('cb-pr', prop)}</g>`
     + `${g('cb-la', r(7, 22, 2, 4, O) + r(17, 22, 2, 4, O))}${g('cb-lb', r(11, 22, 2, 4, O) + r(21, 22, 2, 4, O))}</g>`)}${z}</g></svg>`
 }
 
@@ -455,6 +589,7 @@ export function crabArt(mood: Mood, t = 0): string {
 export const STATION: Record<Mood, number> = {
   idle: 1, think: .85, read: .65, build: .9, saw: .7, type: .5, paint: .3, gear: .1, test: .5, testp: .5, testf: .5,
   debug: .35, dizzy: .35, fixed: .5, done: 1, doze: 1, night: 1, web: .7, sub: .6, codex: .6, git: .4, inst: .55, ask: 1,
+  browse: .75, mcp: .6, plan: .8, skill: .45, sync: .4, ship: .55,
   long: .5, comp: 1,
 }
 // [cycle in s, keyframe stops as [percent, offset from the station], 1 to play once and hold the last stop];
@@ -470,7 +605,7 @@ const ROAM: Partial<Record<Mood, [number, [string, number][], 1?]>> = {
   // Walks right while it paints, leaving the stripe behind (Praj, 12 Oct).
   paint: [16, [['0%', 0], ['100%', .4]], 1],
   // Trips, slides back, gets up (Praj, 12 Oct).
-  testf: [2.4, [['0%,30%', 0], ['75%,100%', -.18]], 1],
+  testf: [2.4, [['0%,40%', 0], ['75%,100%', -.18]], 1],
 }
 const W = 52
 const x = (f: number) => `translateX(calc((100% - ${W}px) * ${+f.toFixed(3)}))`
@@ -500,6 +635,10 @@ const roamOf = (mood: Mood, t: number) => mood === 'web' && t === 2 ? undefined 
 /** Where the crab stands (0 to 1) `s` seconds into a look of `mood` that walked in from `from`: the walk, then the wander. */
 export function where(mood: Mood, from: number, s: number, t = 0): number {
   const to = STATION[mood], d = walkFor(from, to), roam = roamOf(mood, t)
+  if (t === 0 && (mood === 'testp' || mood === 'testf')) {
+    if (s <= .8) return from
+    s -= .8
+  }
   if (s < d) return from + (to - from) * ease(s / d)
   if (!roam) return to
   if (roam[2] && s - d >= roam[0]) return to + roam[1][roam[1].length - 1][1]
@@ -609,21 +748,90 @@ const GLOBE_CSS = '.st-land{animation:st-land 6s ease-in-out infinite}@keyframes
 
 /** The crab acting out take `t` of `mood` on the stage, walking in from `from` (0 to 1), then wandering; `tip` shows
  *  over its head while the pointer is on it (the Svg must be drawn interactive for :hover). */
-export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): string {
-  const to = STATION[mood], d = walkFor(from, to), go = d > 0, roam = roamOf(mood, t)
-  let crab = crabArt(mood, t).replace('width="38" height="30"', `width="${W}" height="41"`)
+// Christmas string lights (0.12.0): a wire with bulbs tiled across the whole stage top, blinking by two tiles.
+const LIGHTS = '<g transform="translate(0,14)"><defs><pattern id="st-lw" width="32" height="9" patternUnits="userSpaceOnUse">'
+  + '<path d="M0 1 Q16 7 32 1" fill="none" stroke="#5F5E5A" stroke-width="1"/>'
+  + '<rect x="7" y="4" width="3" height="3" fill="#E24B4A"/><rect x="22" y="4" width="3" height="3" fill="#1D9E75"/></pattern>'
+  + '<pattern id="st-lx" width="32" height="9" patternUnits="userSpaceOnUse">'
+  + '<rect x="7" y="4" width="3" height="3" fill="#F5C542"/><rect x="22" y="4" width="3" height="3" fill="#378ADD"/></pattern></defs>'
+  + '<rect width="100%" height="9" fill="url(#st-lw)"/>'
+  + '<rect class="st-lt" width="100%" height="9" fill="url(#st-lx)"/></g>'
+export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = '', n?: { subs: number, files: number }, season?: Season, year?: number, trait?: import('../types').Trait): string {
+  const to = STATION[mood], travel = walkFor(from, to), go = travel > 0, roam = roamOf(mood, t)
+  const reaction = t === 0 && (mood === 'testp' || mood === 'testf') ? .8 : 0, d = travel + reaction
+  const release = reaction ? `0%,${+(100 * reaction / d).toFixed(2)}%` : '0%'
+  let crab = crabArt(mood, t, season, year, trait).replace('width="38" height="30"', `width="${W}" height="41"`)
   if (mood === 'web') crab = crab.replace(WEB_GLOBE, '').replace(WEB_WAVE, '')
-  const steps = Math.ceil(d / .2), once = !!roam?.[2], legs = once ? Math.round(roam![0] / .4) : 'infinite'
+  // Stage-only wrappers: the corner art and each take's own animations stay intact.
+  // These wrappers live in the inner SVG's 30×28 coordinates.
+  crab = crab.replace(/(<g class="cb-ey">[^]*?<\/g>)/, '<g class="st-ey">$1</g>')
+    .replace(/(<g class="cb-ar">[^]*?<\/g>)/, '<g class="st-wave">$1</g>')
+  const petSeed = [...`${mood}:${t}:${from}`].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 0)
+  const pet = petLine(petSeed)
+  // Later-painted art cannot intercept the earlier sibling zones. Zones ride the walk,
+  // but stay outside the sidestep/hop so a reaction cannot move its own hit target.
+  // The pet (0.12.0 S13; Praj, 17 Nov: "it jumps a little and very quick, nothing engaging"). CSS only, since a press
+  // cannot reach a hook. A press snaps a state on with no transition; the rest state's transition is what plays when
+  // the press ends, so the payoff outlives even a quick click:
+  //   held     the crab squashes at its feet, eyes shut happy, cheeks blush, hearts wait at its sides; held longer,
+  //            it purrs side to side and more hearts rise in a loop
+  //   let go   it springs back along a linear() curve with two bounces and a 5 px jump, the hearts and two sparkles
+  //            fly out and fade, the happy eyes stay 1.4 s, the pet line 2.2 s
+  //   arrive   the pointer landing on the crab makes it perk up once and look up
+  // The five marks of the burst: x, y, width, then how far each flies and how much it grows. At a station on the
+  // stage's edge the outward ones fly only as far as the crab's box, so the edge never cuts them (seen in Chromium).
+  const MARKS = [[10, 22, 5, -19, -6, 1.3], [38, 22, 5, 19, -6, 1.3], [41, 15, 3.5, 26, 2, 1], [12, 16, 3, -13, 10, 1.4], [39, 30, 3, 22, -3, 1.4]]
+  const fly = (mx: number, mw: number, dx: number) => to > .95 && dx > 0 ? Math.min(dx, W - mx - mw - 1) : to < .05 && dx < 0 ? Math.max(dx, 1 - mx) : dx
+  const SPRING = 'linear(0,.7 9%,1.5 18%,1.8 25%,1.5 32%,.9 43%,.75 49%,.9 55%,1.12 66%,1.15 71%,1 84%,1)'
+  const JUMP = 'linear(0,2.4 12%,3.9 22%,4.4 28%,3.9 34%,2.4 42%,1 50%,1.9 58%,2.2 64%,1.9 70%,1 80%,1)'
+  const pointerCss = '.st-zl,.st-zr,.st-zc{fill:transparent;pointer-events:all}.st-zc{cursor:pointer}'
+    + '.st-look,.st-pet{pointer-events:none}.st-look *,.st-pet *{pointer-events:none}'
+    + '.st-look{transition:transform .25s ease-out}.st-ey{transition:transform .15s ease-out,opacity 0s 1.4s}'
+    + '.st-zl:hover~.st-look{transform:translateX(3px)}.st-zr:hover~.st-look{transform:translateX(-3px)}'
+    + '.st-zl:hover~.st-look .st-ey{transform:translateX(-1.5px)}.st-zr:hover~.st-look .st-ey{transform:translateX(1.5px)}'
+    + '.st-zc:hover~.st-look .st-ey{transform:translateY(-1px)}'
+    + '.st-wave{transform-origin:0 100%}'
+    + '.st-zc:hover~.st-look .st-wave{animation:st-wave .65s ease-in-out infinite}'
+    + '@keyframes st-wave{0%,100%{transform:rotate(0)}50%{transform:rotate(-24deg)}}'
+    + '.st-zc:hover~.st-look .st-perk{animation:st-perk .5s ease-out}'
+    + '@keyframes st-perk{0%,100%{transform:none}30%{transform:translateY(-3px)}55%{transform:none}75%{transform:translateY(-1px)}}'
+    + '.st-zc:active~.st-look .st-perk{animation:st-purr .3s ease-in-out .35s infinite}'
+    + '@keyframes st-purr{0%,100%{transform:translateX(-.8px)}50%{transform:translateX(.8px)}}'
+    + `.st-hop{transform-origin:26px 38.5px;transition:transform .9s ${SPRING}}`
+    + '.st-zc:active~.st-look .st-hop{transform:scale(1.14,.76);transition:transform .06s ease-out}'
+    + `.st-jmp{transition:transform .9s ${JUMP}}`
+    + '.st-zc:active~.st-look .st-jmp{transform:translateY(1.5px);transition:transform .06s ease-out}'
+    + '.st-joy{opacity:0;transition:opacity 0s 1.4s}'
+    + '.st-zc:active~.st-look .st-joy{opacity:1;transition:none}'
+    + '.st-zc:active~.st-look .st-ey{opacity:0;transition:none}'
+    + '.st-hb>*{opacity:0;transform-box:fill-box;transform-origin:50% 50%;transition:transform .9s cubic-bezier(.15,.8,.3,1),opacity .45s ease-in .45s}'
+    + MARKS.map(([mx, , mw, dx, dy, k], i) => `.st-h${i + 1}{transform:translate(${fly(mx, mw, dx)}px,${dy}px)${k === 1 ? '' : ` scale(${k})`}}`).join('')
+    + '.st-zc:active~.st-look .st-hb>*{opacity:1;transform:scale(.6);transition:none}'
+    + '.st-hs>*{opacity:0}'
+    + '.st-zc:active~.st-look .st-hs>*{animation:st-rise 1.1s ease-out .35s infinite}.st-zc:active~.st-look .st-hs>*+*{animation-delay:.9s}'
+    + '@keyframes st-rise{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),-9px)}}'
+    + '.st-pet{opacity:0;transition:opacity .15s 2.2s}'
+    + '.st-zc:active~.st-pet{opacity:1;transition:none}'
+  // The pet's own marks, in stage pixels (the crab's eyes sit at x 20.5 and 34.2, y 19.2 to 21.9).
+  // Drawn at their own coordinates, with no transform attribute: a CSS transform would replace it.
+  const heart = (hx: number, hy: number, c: string, cls: string, k = 1, style = '') => `<g class="${cls}"${style}>`
+    + `${[[0, 0, 2, 1], [3, 0, 2, 1], [0, 1, 5, 2], [1, 3, 3, 1], [2, 4, 1, 1]].map(([dx, dy, w, h]) => r(+(hx + dx * k).toFixed(1), +(hy + dy * k).toFixed(1), +(w * k).toFixed(1), +(h * k).toFixed(1), c)).join('')}</g>`
+  const spark = (hx: number, hy: number, cls: string) => `<g class="${cls}">${r(hx + 1, hy, 1, 3, Y) + r(hx, hy + 1, 3, 1, Y)}</g>`
+  const joy = '<g class="st-joy">' + [19.8, 33.5].map(ex => `<path d="M${ex} 21.9 L${+(ex + 2.1).toFixed(1)} 19 L${+(ex + 4.2).toFixed(1)} 21.9" fill="none" stroke="${I}" stroke-width="1.4"/>`).join('')
+    + `<rect x="18.6" y="23.6" width="3.4" height="1.6" fill="${PINK}"/><rect x="35.6" y="23.6" width="3.4" height="1.6" fill="${PINK}"/></g>`
+  const hearts = `<g class="st-hb">${heart(10, 22, PINK, 'st-h1') + heart(38, 22, RED, 'st-h2') + heart(41, 15, PINK, 'st-h3', .7) + spark(12, 16, 'st-h4') + spark(39, 30, 'st-h5')}</g>`
+    + `<g class="st-hs">${heart(8, 24, RED, 'st-s1', .8, ' style="--dx:-7px"') + heart(41, 24, PINK, 'st-s2', .8, ' style="--dx:7px"')}</g>`
+  const steps = Math.ceil(travel / .2), once = !!roam?.[2], legs = once ? Math.round(roam![0] / .4) : 'infinite'
   const css = '.st-at,.st-in{transform-box:view-box}'
     + `.st-at{transform:${x(to)}}`
-    + (go ? `.st-go{animation:st-go ${+d.toFixed(2)}s ease-in-out}@keyframes st-go{0%{transform:${x(from)}}100%{transform:${x(to)}}}`
-      + `.st-go .cb:not(.cb-walk) .cb-la{animation:cb-st .2s ease-in-out ${steps}}.st-go .cb:not(.cb-walk) .cb-lb{animation:cb-st .2s ease-in-out ${steps} -.1s}` : '')
+    + (go ? `.st-go{animation:st-go ${+d.toFixed(2)}s ease-in-out both}@keyframes st-go{${release}{transform:${x(from)}}100%{transform:${x(to)}}}`
+      + `.st-go .cb:not(.cb-walk) .cb-la{animation:cb-st .2s ease-in-out ${steps} ${reaction}s}.st-go .cb:not(.cb-walk) .cb-lb{animation:cb-st .2s ease-in-out ${steps} ${reaction ? reaction + .1 : -.1}s}` : '')
     // The wander waits for the walk in, so the crab never jumps between the two.
     + (roam ? `.st-in{animation:st-r ${roam[0]}s ease-in-out ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}}@keyframes st-r{${roam[1].map(([p, v]) => `${p}{transform:${x(v)}}`).join('')}}`
       + `.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out ${+d.toFixed(2)}s ${legs}}.st-roam .cb:not(.cb-walk) .cb-lb{animation:cb-st .4s ease-in-out ${+(d + .2).toFixed(2)}s ${legs}}` : '')
     // The crab faces right, so it pitches forward over its front foot at (40, 38).
     + (mood === 'testf' ? `.st-tr{transform-box:view-box;transform-origin:0 0;animation:st-trip 2.4s ease-in-out ${+d.toFixed(2)}s 1 both}`
-      + '@keyframes st-trip{0%,15%{transform:none}30%,75%{transform:translate(40px,38px) rotate(24deg) translate(-40px,-38px)}100%{transform:none}}' : '')
+      + '@keyframes st-trip{0%,40%{transform:none}52%,80%{transform:translate(40px,38px) rotate(24deg) translate(-40px,-38px)}100%{transform:none}}' : '')
     // Pointer on the crab: the label shows over its head and rides with it; the crab keeps walking. The label
     // stays 3 s after the pointer leaves, then fades out in .2 s (Praj, 12 Oct: a pause stopped the crab, a quick
     // pass lost it).
@@ -639,7 +847,7 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   }
   if (go) {
     // Footprints along the walk-in, each laid as the crab passes, then fading (Praj, 12 Oct).
-    trail(Math.max(2, Math.round(Math.abs(to - from) * 14)), from, to, 0, d).forEach(({ f, t }, k) => {
+    trail(Math.max(2, Math.round(Math.abs(to - from) * 14)), from, to, reaction, travel).forEach(({ f, t }, k) => {
       const [a, b] = k % 2 ? [22, 36] : [17, 31]
       fx += `<g class="st-fp" style="transform:${x(f)};animation-delay:${t.toFixed(2)}s">${[a, b].map(v => `<rect x="${v}" y="39" width="3" height="1.5" fill="${G}"/>`).join('')}</g>`
     })
@@ -651,8 +859,9 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
     fxCss += '.st-sp{transform-box:view-box;animation:st-sp .3s ease-out both}@keyframes st-sp{0%{opacity:0}100%{opacity:1}}'
   }
   if (mood === 'sub' && !t) {
-    // Two mini crabs trot the whole stage, half a lap apart.
-    for (const delay of [0, -7]) fx += `<g class="st-mc" style="animation-delay:${delay}s"><g class="st-mb"><g transform="translate(0,28) scale(.4)">${MINI_BODY}</g></g></g>`
+    // One mini crab per running subagent, up to three, spaced evenly round the lap (two when no count is given).
+    const minis = Math.min(3, n ? n.subs : 2)
+    for (const delay of Array.from({ length: minis }, (_, k) => -14 * k / minis)) fx += `<g class="st-mc" style="animation-delay:${delay}s"><g class="st-mb"><g transform="translate(0,28) scale(.4)">${MINI_BODY}</g></g></g>`
     fxCss += '.st-mc{transform-box:view-box;animation:st-mc 14s linear infinite}@keyframes st-mc{0%{transform:translateX(-14px)}100%{transform:translateX(100%)}}'
       + '.st-mb{animation:st-mb .3s ease-in-out infinite}@keyframes st-mb{50%{transform:translateY(-1px)}}'
   }
@@ -664,7 +873,8 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   if (mood === 'web' && t === 1) { rides = GLOBE; fxCss += GLOBE_CSS }
   // Build lays a wall leftward, course by course.
   if (mood === 'build' && !t) {
-    const bricks = [...Array.from({ length: 10 }, (_, k) => [-2 - (k + 1) * 9, 34.5]), ...Array.from({ length: 9 }, (_, k) => [-6.5 - (k + 1) * 9, 30])]
+    // One brick per file edited this turn, up to the wall's 19 (the full wall when no count is given).
+    const bricks = [...Array.from({ length: 10 }, (_, k) => [-2 - (k + 1) * 9, 34.5]), ...Array.from({ length: 9 }, (_, k) => [-6.5 - (k + 1) * 9, 30])].slice(0, n ? n.files : 19)
     rides = g('st-fx', bricks.map(([bx, by], j) => `<rect x="${bx}" y="${by}" width="8" height="4" fill="${j % 2 ? BR2 : BR}" class="st-bk" style="animation-delay:${(d + .3 + j * .45).toFixed(2)}s"/>`).join(''))
     fxCss += '.st-bk{animation:st-bk .25s ease-out both}@keyframes st-bk{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:none}}'
   }
@@ -674,11 +884,11 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   const tw = +[...tip].reduce((t, c) => t + em(c) * 11.5, 0).toFixed(1), w = Math.round(tw + 8), side = (f: number) => f >= .5 ? W - w : 0, lx = side(to)
   // The crab crosses the middle while it walks in or wanders, so the label switches sides with it on the same clocks
   // (recording 12:24: "A command faile" ran off the right edge). Offsets from the resting side, held between steps.
-  const swap = (name: string, at: (u: number) => number, clock: string) => {
+  const swap = (name: string, at: (u: number) => number, clock: string, width = w, pos = (right: boolean) => right ? W - width : 0) => {
     const k: string[] = []
     let was = NaN
     for (let i = 0; i <= 100; i++) {
-      const v = side(at(i / 100)) - lx
+      const v = pos(at(i / 100) >= .5) - pos(to >= .5)
       if (v !== was || i === 100) k.push(`${i}%{transform:translateX(${v}px)}`), was = v
     }
     return k.some(f => !f.includes('(0px)')) ? { css: `.${name}{animation:${name} ${clock}}@keyframes ${name}{${k.join('')}}`, name } : undefined
@@ -689,10 +899,26 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = ''): str
   const label = tip ? wrap(`<g class="st-tip"><rect x="${lx}" y="0" width="${w}" height="13.5" rx="3" class="st-bg"/>`
     + `<text x="${lx + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${tw}" lengthAdjust="spacing">`
     + `${tip.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text></g>`) : ''
+  // One caption at a time (Praj, 17 Nov): the pet line stands in the label's lane, drawn after it and at least as
+  // wide, so it covers the label while it shows and fades.
+  const pw = Math.max(w, Math.ceil([...pet].reduce((sum, c) => sum + em(c) * 11.5, 0)) + 8)
+  const px = to >= .5 ? W - pw : 0
+  const pwalk = go ? swap('st-pw', u => where(mood, from, d * u, t), `${+d.toFixed(2)}s step-end`, pw) : undefined
+  const proam = roam ? swap('st-pr', u => where(mood, from, d + roam[0] * u, t), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`, pw) : undefined
+  const bubble = `<g class="st-pet">${[proam, pwalk].reduce((body, l) => l ? g(l.name, body) : body,
+    `<rect x="${px}" y="0" width="${pw}" height="13.5" rx="3" class="st-bg"/>`
+    + `<text x="${px + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink">${pet}</text>`)}</g>`
+  const zones = '<rect class="st-zl" x="-24" y="14" width="32" height="27"/>'
+    + '<rect class="st-zr" x="46" y="14" width="32" height="27"/>'
+    + '<rect class="st-zc" x="8" y="14" width="38" height="27"/>'
   // Reduced motion: no extras, and the crab stands at its station without walking, wandering or riding; last, so
   // no later rule of the same weight starts a motion again (21 Oct: the walk-in and wander still played).
   const moving = ['.st-tr', go && '.st-go', roam && '.st-in', lw && '.st-lw', lr && '.st-lr'].filter(Boolean).join()
-  const still = `@media (prefers-reduced-motion:reduce){.st-fx{display:none}${moving}{animation:none}.st-tr{transform:none}}`
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${fxCss}${lw?.css ?? ''}${lr?.css ?? ''}${still}</style>${fx ? g('st-fx', fx) : ''}`
-    + `<g class="st-at${go ? ' st-go' : ''}${roam ? ' st-roam' : ''}"><g class="st-in"><rect width="${W}" height="41" fill="transparent"/>${rides}<g class="st-tr">${crab}</g>${label}</g></g></svg>`
+  const petStill = '@media (prefers-reduced-motion:reduce){.st-pw,.st-pr{animation:none}'
+    + '.st-zl:hover~.st-look,.st-zr:hover~.st-look,.st-look .st-ey,.st-look .st-wave,.st-look .st-hop,.st-look .st-jmp,.st-look .st-perk,.st-look .st-hs>*,.st-look .st-hb>*{animation:none!important;transform:none!important;transition:none!important}'
+    + '.st-look,.st-zc:active~.st-pet,.st-pet{transition:none}}'
+  const lightCss = season === 'christmas' ? '.st-lt{animation:st-lt 1.6s steps(1) infinite}@keyframes st-lt{50%{opacity:0}}' : ''
+  const still = `@media (prefers-reduced-motion:reduce){${season === 'christmas' ? '.st-lt{animation:none}' : ''}.st-fx{display:none}${moving}{animation:none}.st-tr{transform:none}}`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${lightCss}${pointerCss}${fxCss}${pwalk?.css ?? ''}${proam?.css ?? ''}${lw?.css ?? ''}${lr?.css ?? ''}${petStill}${still}</style>${fx ? g('st-fx', fx) : ''}${season === 'christmas' ? LIGHTS : ''}`
+    + `<g class="st-at${go ? ' st-go' : ''}"><g class="st-in${roam ? ' st-roam' : ''}"><rect width="${W}" height="41" fill="transparent"/>${rides}${zones}<g class="st-look"><g class="st-perk"><g class="st-jmp"><g class="st-hop"><g class="st-tr">${crab}${joy}</g></g></g></g>${hearts}</g>${label}${bubble}</g></g></svg>`
 }

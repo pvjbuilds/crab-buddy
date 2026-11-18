@@ -8,7 +8,7 @@
     {
       "name": "crab-buddy",
       "source": "./",
-      "description": "An animated pixel-art Claude crab above the prompt that acts out what Claude is doing: 25 moods, 110 takes, desktop and terminal. 0 tokens."
+      "description": "An animated pixel-art Claude crab above the prompt that acts out what Claude is doing: 31 moods, 122 base takes plus seven scenes per Friday, weekend and Sunday-night calendar look, desktop and terminal. 0 tokens."
     }
   ]
 }

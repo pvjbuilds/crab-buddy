@@ -12,7 +12,7 @@ const moods = Object.keys(MEANING) as Mood[]
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 // Each take's SVG shares one big style block; only the scene's beat rules differ. Ship the block once and each take's
-// own part, and let the page put them back together, so 110 animated takes weigh tens of kB, not megabytes.
+// own part, and let the page put them back together, so 122 animated takes weigh tens of kB, not megabytes.
 const split = (s: string) => {
   const a = s.indexOf('<style>'), b = s.indexOf('</style>') + 8
   return { open: s.slice(0, a), style: s.slice(a, b), rest: s.slice(b) }
@@ -33,6 +33,9 @@ const WHEN: Record<Mood, string> = {
   fixed: 'Tests pass after a failure', done: 'The turn ended', doze: '10 min with nothing happening',
   night: 'Idle between midnight and 5 am', web: 'WebSearch, WebFetch', sub: 'A subagent (Agent, Task)',
   codex: 'Bash running codex or agy', git: 'git commit, git push', inst: 'npm/pip/brew/uv install',
+  browse: 'Browser MCP tools and playwright-cli', mcp: 'Other MCP tools',
+  plan: 'Plan mode, TodoWrite, work state tools', skill: 'Skill tool',
+  sync: 'git pull, fetch, merge, rebase, checkout, switch, stash', ship: 'Deploy, publish, pull request and release commands',
   ask: 'A question or permission prompt waits on you', long: 'Turn past 5 min, alternating with the work',
   comp: 'A compaction really runs (not a vetoed one)',
 }
@@ -45,16 +48,25 @@ const GROUPS: [string, string, Term[]][] = [
     ['status lines', 'Other plugins\' status lines, drawn in the band above the caption instead of piling up in the footer.', 'other mods\' lines', '<code>lines</code> atom · <code>setLine()</code> · <code>FOOTER</code> (exceptions kept in the footer)'],
     ['stage', 'Right half of the band (desktop app). The crab walks across it.', 'stage width, stage edge', '<code>stageArt()</code> in <code>art.ts</code>'],
     ['station', 'The crab\'s spot on the stage for a mood: 0 is the stage\'s left end, 1 the right edge by the prompt.', 'move read\'s station left', '<code>STATION</code> in <code>art.ts</code>'],
+    ['pointer zone', 'An invisible area beside or over the stage crab: hover beside it to look and sidestep; hover on it to wave; press to pet.', 'left pointer zone', '<code>stageArt()</code> · <code>.st-zl</code>, <code>.st-zr</code>, <code>.st-zc</code>'],
+    ['pet', 'A press on the stage crab: it squashes with happy eyes while held, purrs and sends hearts up if held longer, then springs back with two bounces and a burst of hearts on release. Its one-liner takes the caption lane for 2.2 s; the mood and label stay the same.', 'pet bubble text', '<code>petLine()</code> · <code>PET_LINES</code> · <code>.st-pet</code>'],
     ['corner', 'Fallback when the window is too narrow for a stage: the crab sits in the corner and does not walk.', 'corner mode', '<code>register.tsx</code>, narrow branch'],
     ['label', 'The pill over the crab\'s head while the pointer is on it. Shows the mood\'s meaning; stays 3 s after the pointer leaves.', 'hover label, tip', '<code>MEANING</code> · <code>.st-tip</code>'],
   ]],
   ['acting', 'What the crab does', [
-    ['mood', 'What Claude is doing, as one of 25 ids (think, read, build, test…). Tool calls and turn events pick it.', 'the test mood', '<code>Mood</code> in <code>types</code> · <code>classify()</code>, <code>step()</code>, <code>shown()</code> in <code>crab.ts</code>'],
+    ['season', 'A local calendar period that adds a look without changing the mood.', 'the Friday season', '<code>season()</code> in <code>crab.ts</code>'],
+    ['costume', 'A seasonal hat or other dressing on the crab.', 'the Christmas costume', '<code>crabArt()</code> in <code>art.ts</code>'],
+    ['calendar take', 'Seven extra takes (indices 4–10) for Friday, weekend and Sunday night. Idle alternates base and calendar; done always plays the calendar scene. Weekend doze shares its seven scenes.', 'the weekend idle take', '<code>takes()</code>, <code>take()</code>, <code>calendarScene()</code> in <code>crab.ts</code>; <code>calendar-scenes.ts</code>'],
+    ['mood', 'What Claude is doing, as one of 31 ids (think, read, build, test…). Tool calls and turn events pick it.', 'the test mood', '<code>Mood</code> in <code>types</code> · <code>classify()</code>, <code>step()</code>, <code>shown()</code> in <code>crab.ts</code>'],
     ['look', 'What the band shows right now: a mood, one of its takes and the caption. A <b>switch</b> is the look changing.', 'the look switches too often', '<code>look</code> atom · <code>show()</code> in <code>register.tsx</code>'],
     ['take', 'One version of a mood. Take 0 carries the mood\'s plain name (<code>think</code>), the others a number (<code>think1</code> to <code>think8</code>). Busy moods have 9, each build scene 2, the rest 4. See the atlas below.', 'think5 is my favourite; drop read7', 'take 0: <code>LOOK</code> · others: <code>TAKE</code> · CSS <code>.cb-think5</code> · count: <code>takes()</code>'],
     ['scene', 'The 14 s a take plays for: work, a beat, more work, a second beat. Then the next take.', 'scene length; a longer scene', '<code>SCENE</code> in <code>crab.ts</code> and <code>14s</code> in <code>scene()</code>, <code>art.ts</code>: change both'],
     ['work loop', 'The take\'s own short motion, repeating inside the scene: the hammer swing every 4 s, the saw every 0.5 s.', 'think5\'s work loop is too fast', 'the take\'s CSS rules, <code>.cb-&lt;take&gt;</code> in <code>art.ts</code>'],
-    ['beat', 'A short break where the whole crab moves: hop, admire, turn, stretch, shimmy or tilt. Two per scene, at about 4.8–6.2 s and 10.1–11.5 s. A take always gets the same pair, picked from its id.', 'bigger beats; one beat per scene; no turn beat', '<code>BEATS</code>, <code>WINDOW</code>, <code>scene()</code> in <code>art.ts</code>'],
+    ['beat', 'A short break where the whole crab moves: hop, admire, turn, stretch, shimmy or tilt. Two per scene, at about 4.8–6.2 s and 10.1–11.5 s. A take always gets the same pair, picked from its id. Authored calendar and second tool takes instead connect a setup to its answer with their own timed actions.', 'bigger beats; one beat per scene; no turn beat', '<code>BEATS</code>, <code>WINDOW</code>, <code>scene()</code> in <code>art.ts</code>'],
+    ['reaction hold', 'A readable pose kept still after a result: at least 0.8 s for a test tick or cross, 1.12 s for the Monday side glance.', 'hold the reaction longer', '<code>acting()</code> · <code>cb-reaction</code> · <code>cb-result-arm</code> in <code>art.ts</code>'],
+    ['follow-through', 'The claw settles after the body, so a snap has weight. Authored stories use a 0.28 s offset.', 'more claw follow-through', '<code>acting()</code> · <code>cb-follow</code> in <code>art.ts</code>'],
+    ['calendar scene', 'Seven 14 s scenes per look: the original plus six new stories. Friday: laptop, week bar, OOO, disco, pizza, envelope. Weekend: sandcastle, fishing, kite, ball, sleeping in, game. Sunday night: ironing, alarms, inbox, battery, lunch box, blanket. A 42 s clock slot chooses a scene from a daily seeded shuffle; all seven play before repeating, with midnight repeats prevented.', 'the Sunday calendar scene', '<code>TAKE</code> · <code>acting()</code> · <code>calendarSceneArt()</code> in <code>calendar-scenes.ts</code>; captions: <code>CALENDAR_LINES</code>, <code>lineFitsScene()</code>'],
+    ['second tool take', 'Browse scrolls a long page; MCP lights three sockets; plan pins notes; skill unrolls a scroll; sync circles arrows; ship lands a parachute crate.', 'the ship second take', '<code>TAKE</code> · <code>browse1</code>, <code>mcp1</code>, <code>plan1</code>, <code>skill1</code>, <code>sync1</code>, <code>ship1</code>'],
     ['emote', 'The tiny icon over the crab\'s shoulder during a beat: bang (!), note (♪), spark, ask (?), love (heart), sweat (drop).', 'no hearts on test; bigger emotes', '<code>EMOTE</code> in <code>art.ts</code>'],
     ['glum moods', 'testf, debug, dizzy, long, ask. Their emotes are only sweat, ask or bang, never a heart.', 'make long glum too', '<code>GLUM</code> in <code>art.ts</code>'],
     ['prop', 'A thing on the crab\'s body or claw: magnifier, flask, coffee cup.', 'bigger magnifier', 'first slot of a <code>LOOK</code>/<code>TAKE</code> entry · <code>.cb-pr</code>'],
@@ -79,6 +91,8 @@ const GROUPS: [string, string, Term[]][] = [
   ]],
   ['words', 'Text', [
     ['one-liner', 'A caption line. Ten per mood, fifteen for the busy moods; all build scenes share one list. Picked by the moment the mood came up.', 'add five one-liners to git', '<code>LINES</code>, <code>BUILD_LINES</code> in <code>crab.ts</code>'],
+    ['trait', 'The session’s busiest eligible activity: tester, builder, reader, surfer, manager or fixer. Adds a small item in idle and done and occasional counted captions; never changes the mood or meaning.', 'the builder trait', '<code>trait()</code>, <code>TRAIT_LINES</code> in <code>crab.ts</code> · <code>cb-trait</code> in <code>art.ts</code>'],
+    ['project memory', 'A few counters per hashed working directory in the plugin store. Greets returning projects, keeps at most 200, disabled by CRAB_MEMORY=off. No paths, names or prompts.', 'turn project memory off', '<code>projectKey()</code>, <code>greeting()</code> in <code>crab.ts</code> · <code>$.store</code> in <code>register.tsx</code>'],
     ['meaning', 'The plain description on the hover label. Said with certainty: no "or".', 'reword the meaning of codex', '<code>MEANING</code> in <code>crab.ts</code>'],
   ]],
 ]
@@ -86,7 +100,7 @@ const GROUPS: [string, string, Term[]][] = [
 const CONFUSED: [string, string][] = [
   ['mood vs look vs take', 'A <b>mood</b> is what Claude is doing. A <b>take</b> is one way the crab acts it. The <b>look</b> is the mood and take on screen right now.'],
   ['scene vs build scene', 'Every take plays as a 14 s <b>scene</b>. A <b>build scene</b> is one of the five moods a build rotates through (build, saw, type, paint, gear).'],
-  ['beat vs work loop', 'The <b>work loop</b> is the take\'s own repeating motion. A <b>beat</b> is the break from it, twice per scene, the same six moves for every take.'],
+  ['beat vs work loop', 'The <b>work loop</b> is the take\'s own repeating motion. A <b>beat</b> is the break from it, twice per scene, picked from six moves for ordinary takes. Authored stories instead connect a setup to an answer.'],
   ['prop vs set vs stage extra', 'A <b>prop</b> is on the crab, a <b>set</b> stands beside it, a <b>stage extra</b> spans the whole stage behind it.'],
   ['dwell vs hold vs scene', '<b>Dwell</b> (8 s): the least a look stays. <b>Hold</b> (5 s): how long a result shows. <b>Scene</b> (14 s): how long one take plays before the next.'],
   ['animation', 'Too vague on its own. Say which: the take, its work loop, a beat, an emote, the walk-in or a stage extra.'],
@@ -147,7 +161,7 @@ figure img{width:95px;height:75px;image-rendering:pixelated}figcaption{font:12px
 </style></head><body><main>
 <h1>Crab Buddy glossary</h1>
 <p class="lead">One word for each part of the crab, so a change can be asked for in one sentence. Each term says what it is, how to say it, and where it lives in the code. Version ${version}. Regenerate with <code>bun docs/glossary.ts</code>.</p>
-<nav><a href="#map">The map</a><a href="#scene-anatomy">A scene, second by second</a><a href="#places">Places</a><a href="#acting">Acting</a><a href="#clocks">Timing</a><a href="#words">Text</a><a href="#confused">Easy to mix up</a><a href="#ask">How to ask</a><a href="#moods">All 25 moods</a><a href="#atlas">Take atlas</a></nav>
+<nav><a href="#map">The map</a><a href="#scene-anatomy">A scene, second by second</a><a href="#places">Places</a><a href="#acting">Acting</a><a href="#clocks">Timing</a><a href="#words">Text</a><a href="#confused">Easy to mix up</a><a href="#ask">How to ask</a><a href="#moods">All 31 moods</a><a href="#atlas">Take atlas</a></nav>
 <input id="q" type="search" placeholder="Filter terms and moods: beat, dwell, station…" aria-label="Filter terms and moods">
 
 <section id="map"><h2>The map</h2>
@@ -157,7 +171,7 @@ figure img{width:95px;height:75px;image-rendering:pixelated}figcaption{font:12px
 </section>
 
 <section id="scene-anatomy"><h2>A scene, second by second</h2>
-<p class="lead">Every take plays as a 14 s scene. The work loop runs throughout; the whole crab breaks for two beats, each with an emote.</p>
+<p class="lead">Every take plays as a 14 s scene. Ordinary takes break their work loop for two beats with emotes. Authored calendar and second tool takes use the same 14 s clock for a setup, a held reaction and an answering action.</p>
 <div class="timeline">
 <span class="w" style="left:0;width:34%">work loop</span><span class="b" style="left:34%;width:10%">beat 1</span>
 <span class="w" style="left:44%;width:28%">work loop</span><span class="b" style="left:72%;width:10%">beat 2</span><span class="w" style="left:82%;width:18%">work</span></div>
@@ -176,7 +190,7 @@ ${CONFUSED.map(([h, p]) => `<div class="pair"><h3>${h}</h3><p>${p}</p></div>`).j
 ${ASK.map(([s, c]) => `<tr><td>${s}</td><td class="code">${c}</td></tr>`).join('')}
 </tbody></table></div></section>
 
-<section id="moods"><h2>All 25 moods</h2>
+<section id="moods"><h2>All 31 moods</h2>
 <div class="wrap"><table><thead><tr><th>Mood</th><th>Meaning (hover label)</th><th>Shows when</th><th>Takes</th><th>Station</th><th>Lines</th></tr></thead><tbody>${moodRows}</tbody></table></div>
 <p class="lead">Build scenes rotate in this order: ${BUILDS.map(b => `<code>${b}</code>`).join(' → ')}.</p></section>
 
@@ -199,5 +213,7 @@ q.addEventListener('input',()=>{const v=q.value.trim().toLowerCase();
   for(const el of document.querySelectorAll('[data-q]'))el.hidden=!!v&&!el.dataset.q.includes(v)});
 </script></body></html>
 `
-writeFileSync(`${here}glossary.html`, html)
-console.log(`docs/glossary.html: ${atlas.length} takes, ${(html.length / 1024).toFixed(0)} kB`)
+// An alternate output lets restricted art edits rebuild and inspect without changing generated docs.
+const output = process.env.CRAB_GLOSSARY_OUTPUT ?? `${here}glossary.html`
+writeFileSync(output, html)
+console.log(`${output}: ${atlas.length} takes, ${(html.length / 1024).toFixed(0)} kB`)

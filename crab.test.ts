@@ -24,7 +24,9 @@ test('a tool call picks the crab mood from the tool and, for Bash, the command',
   expect(classify('Bash', { command: "sed -i '' s/a/b/ x.ts" })).toBe('build')
   expect(classify('Bash', { command: 'cat a > b' })).toBe('build')
   expect(classify('Bash', { command: 'ls && bun run build' })).toBe('build')
-  expect(classify('mcp__x__thing', {})).toBe('think')
+  // 0.12.0 S2: an unknown mcp__ tool is now 'mcp' (was 'think'); the old expectation was the stale side.
+  expect(classify('mcp__x__thing', {})).toBe('mcp')
+  expect(classify('SomethingNew', {})).toBe('think')
 })
 
 import { step, shown, setLine, START } from './hooks/crab.ts'
@@ -367,4 +369,674 @@ test('every take plays as a 14 s scene: work, a beat at ~5 s, work, another beat
   // The pairs vary across a mood's takes, and the dozing crab sleeps through.
   expect(new Set([...Array(takes('think')).keys()].map(t => beats(crabArt('think', t)).join())).size).toBeGreaterThanOrEqual(5)
   expect(beats(crabArt('doze', 0))).toEqual([])
+})
+
+// 0.12.0 S1: more test runners count as tests.
+test('more test runners show the test look: playwright, dotnet, mvn, gradle, swift, rspec, phpunit, make', () => {
+  for (const cmd of ['npx playwright test', 'dotnet test', 'mvn test', './gradlew test', 'gradle test', 'swift test', 'bundle exec rspec spec/', 'rspec', 'vendor/bin/phpunit', 'make test'])
+    expect([cmd, classify('Bash', { command: cmd })]).toEqual([cmd, 'test'])
+  // Near misses stay what they were.
+  for (const cmd of ['echo mvn tests are slow > notes.txt', 'git log --oneline', 'xpytest-helper --go'])
+    expect(classify('Bash', { command: cmd })).not.toBe('test')
+})
+
+// 0.12.0 S2: six moods for tools that showed "Thinking" (PLAN S2). Browse before mcp; Bash test detection stays first.
+test('new moods: browse, mcp, plan, skill, sync, ship', () => {
+  for (const t of ['mcp__Claude_Browser__navigate', 'mcp__claude-in-chrome__computer', 'mcp__computer-use__app_click', 'mcp__plugin_playwright__browser_click'])
+    expect([t, classify(t, {})]).toEqual([t, 'browse'])
+  expect(classify('Bash', { command: 'playwright-cli -s=a open http://localhost:3000' })).toBe('browse')
+  for (const t of ['mcp__google-sheets__sheets_read', 'mcp__Apify__call-actor'])
+    expect([t, classify(t, {})]).toEqual([t, 'mcp'])
+  for (const t of ['EnterPlanMode', 'ExitPlanMode', 'TodoWrite', 'mcp__plugin_claude-mem_mcp-search__work_state_write', 'mcp__x__work_state_read'])
+    expect([t, classify(t, {})]).toEqual([t, 'plan'])
+  expect(classify('Skill', { skill: 'tdd' })).toBe('skill')
+  for (const c of ['git pull', 'git fetch origin', 'git merge main', 'git rebase main', 'git checkout -b x', 'git switch main', 'git stash pop'])
+    expect([c, classify('Bash', { command: c })]).toEqual([c, 'sync'])
+  for (const c of ['docker build .', 'kubectl apply -f x.yaml', 'gh pr create --fill', 'gh release create v1', 'vercel --prod', 'fly deploy', 'npm publish'])
+    expect([c, classify('Bash', { command: c })]).toEqual([c, 'ship'])
+  // Existing looks keep their place: tests stay first in Bash, commit and push stay git, unknown tools still think.
+  expect(classify('Bash', { command: 'npm test && git pull' })).toBe('test')
+  expect(classify('Bash', { command: 'git commit -m x && git push' })).toBe('git')
+  expect(classify('SomethingNew', {})).toBe('think')
+  // Browser-looking names that are not tools stay out: a plain Bash that merely mentions chrome.
+  expect(classify('Bash', { command: 'echo chrome > a.txt' })).toBe('build')
+})
+
+test('brief moods: after sync, ship, skill, plan and mcp end, Claude is thinking again', () => {
+  for (const m of ['sync', 'ship', 'skill', 'plan', 'mcp'] as const) {
+    const c = step(step(START, { kind: 'turnStart' }, 0), { kind: 'tool', mood: m }, 1)
+    expect(c.mood).toBe(m)
+    expect(step(c, { kind: 'toolEnd', mood: m, isError: false }, 2).mood).toBe('think')
+  }
+})
+
+// 0.12.0 S3: honest numbers. The stage shows only counts that really happened this turn.
+import { tally } from './hooks/crab.ts'
+import { stageArt as stage } from './hooks/art.ts'
+
+const edit = (file: string, at: number) => [
+  [at, { kind: 'tool', mood: 'build', file }], [at + 100, { kind: 'toolEnd', mood: 'build', isError: false, file }],
+] as [number, Parameters<typeof step>[1]][]
+
+test('the tally counts edits, unique files, test runs, running subagents; a new turn resets it', () => {
+  const c = run([0, { kind: 'turnStart' }], ...edit('/a.ts', S), ...edit('/a.ts', 2 * S), ...edit('/b.ts', 3 * S),
+    [4 * S, { kind: 'tool', mood: 'sub' }], [4 * S + 1, { kind: 'tool', mood: 'sub' }], [5 * S, { kind: 'toolEnd', mood: 'sub', isError: false }])
+  expect([c.n.edits, c.n.files.length, c.n.subs]).toEqual([3, 2, 1])
+  // A failed edit is not an edit; a tool end with no start never goes below zero.
+  const f = run([0, { kind: 'turnStart' }], [S, { kind: 'toolEnd', mood: 'build', isError: true, file: '/x.ts' }], [2 * S, { kind: 'toolEnd', mood: 'sub', isError: false }])
+  expect([f.n.edits, f.n.files.length, f.n.subs]).toEqual([0, 0, 0])
+  // Bash building counts no edit: no file named.
+  expect(run([0, { kind: 'turnStart' }], [S, { kind: 'toolEnd', mood: 'build', isError: false }]).n.edits).toBe(0)
+  const next = step(c, { kind: 'turnStart' }, T0 + 9 * S)
+  expect([next.n.edits, next.n.files.length, next.n.subs, next.n.testRuns]).toEqual([0, 0, 0, 0])
+})
+
+test('the tally counts test runs and keeps the last result; a sub that ends on error still frees its slot', () => {
+  const c = run([0, { kind: 'turnStart' }], [S, { kind: 'tool', mood: 'test' }], [2 * S, { kind: 'toolEnd', mood: 'test', isError: true }],
+    [3 * S, { kind: 'tool', mood: 'test' }], [4 * S, { kind: 'toolEnd', mood: 'test', isError: false }])
+  expect([c.n.testRuns, c.n.testOk]).toEqual([2, true])
+  const s = run([0, { kind: 'turnStart' }], [S, { kind: 'tool', mood: 'sub' }], [2 * S, { kind: 'toolEnd', mood: 'sub', isError: true }])
+  expect(s.n.subs).toBe(0)
+})
+
+test('the closing caption is the tally, leaves out every zero, and a turn with nothing to count keeps the plain line', () => {
+  const done = (...evs: [number, Parameters<typeof step>[1]][]) => step(run([0, { kind: 'turnStart' }], ...evs), { kind: 'turnEnd' }, T0 + 4 * M)
+  const six = [1, 2, 3, 4, 5, 6].flatMap((i, k) => edit(i <= 3 ? '/a.ts' : i <= 5 ? '/b.ts' : '/c.ts', S + k * 1000))
+  const t = (ok: boolean) => [[20 * S, { kind: 'tool', mood: 'test' }], [21 * S, { kind: 'toolEnd', mood: 'test', isError: !ok }]] as [number, Parameters<typeof step>[1]][]
+  expect(tally(done(...six, ...t(true)))).toBe('Done: 6 edits in 3 files, tests green, 4 min.')
+  expect(tally(done(...edit('/a.ts', S)))).toBe('Done: 1 edit in 1 file, 4 min.')
+  expect(tally(done(...t(false)))).toBe('Done: tests red, 4 min.')
+  expect(tally(done(...t(true), ...t(true)))).toBe('Done: tests green (2 runs), 4 min.')
+  expect(tally(done([S, { kind: 'tool', mood: 'read' }]))).toBeUndefined()
+  // Under a minute it says seconds.
+  const quick = step(run([0, { kind: 'turnStart' }], ...edit('/a.ts', S)), { kind: 'turnEnd' }, T0 + 42 * S)
+  expect(tally(quick)).toBe('Done: 1 edit in 1 file, 42 s.')
+  // Before any turn ended there is no tally to read.
+  expect(tally(START)).toBeUndefined()
+})
+
+test('stage: one mini crab per running subagent up to three; no count given keeps the old two', () => {
+  const minis = (subs: number) => stage('sub', 0, .6, '', { subs, files: 0 }).match(/class="st-mc"/g)?.length ?? 0
+  expect([1, 2, 3, 7].map(minis)).toEqual([1, 2, 3, 3])
+  expect(stage('sub', 0, .6).match(/class="st-mc"/g)?.length).toBe(2)
+})
+
+test('stage: the wall has one brick per file edited this turn, up to the wall\'s size; no count given keeps the full wall', () => {
+  const bricks = (files: number) => stage('build', 0, .9, '', { subs: 0, files }).match(/class="st-bk"/g)?.length ?? 0
+  expect([0, 1, 5, 19, 40].map(bricks)).toEqual([0, 1, 5, 19, 19])
+  expect(stage('build', 0, .9).match(/class="st-bk"/g)?.length).toBe(19)
+})
+
+test('the tally says 59 s, then 1 min exactly at a minute', () => {
+  const at = (ms: number) => tally(step(run([0, { kind: 'turnStart' }], ...edit('/a.ts', S)), { kind: 'turnEnd' }, T0 + ms))
+  expect([at(59 * S), at(60 * S)]).toEqual(['Done: 1 edit in 1 file, 59 s.', 'Done: 1 edit in 1 file, 1 min.'])
+})
+
+// 0.12.0 S4: calendar looks (PLAN S4). Costume, set dressing and extra lines; the mood and its hover meaning stay true.
+import { season, SEASON_LINES, pickLine, lineFitsScene, CALENDAR_LINES } from './hooks/crab.ts'
+const at = (y: number, mo: number, d: number, h = 12, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime()
+
+test('season(): friday from 16:00, weekend, sunday night from 18:00, christmas 18-30 Dec, new year 31 Dec to 7 Jan', () => {
+  expect(season(at(2026, 11, 20, 15, 59))).toBeUndefined()           // Friday before 16:00
+  expect(season(at(2026, 11, 20, 16, 0))).toBe('friday')
+  expect(season(at(2026, 11, 20, 23, 59))).toBe('friday')
+  expect(season(at(2026, 11, 21, 0, 0))).toBe('weekend')              // Saturday all day
+  expect(season(at(2026, 11, 21, 23, 59))).toBe('weekend')
+  expect(season(at(2026, 11, 22, 17, 59))).toBe('weekend')            // Sunday before 18:00
+  expect(season(at(2026, 11, 22, 18, 0))).toBe('sundayNight')
+  expect(season(at(2026, 11, 22, 23, 59))).toBe('sundayNight')
+  expect(season(at(2026, 11, 23, 0, 0))).toBeUndefined()              // Monday
+  expect(season(at(2026, 11, 18, 12))).toBeUndefined()                // a Wednesday
+  // Christmas and New Year win over the weekday looks (18 Dec 2026 is a Friday, 19-20 Dec a weekend).
+  expect(season(at(2026, 12, 17, 23, 59))).toBeUndefined()
+  expect(season(at(2026, 12, 18, 17))).toBe('christmas')
+  expect(season(at(2026, 12, 19, 12))).toBe('christmas')
+  expect(season(at(2026, 12, 25, 9))).toBe('christmas')
+  expect(season(at(2026, 12, 30, 23, 59))).toBe('christmas')
+  expect(season(at(2026, 12, 31, 0, 0))).toBe('newYear')
+  expect(season(at(2027, 1, 1, 12))).toBe('newYear')                  // a Friday: New Year wins
+  expect(season(at(2027, 1, 7, 23, 59))).toBe('newYear')
+  expect(season(at(2027, 1, 8, 9))).toBeUndefined()                   // Friday morning
+  expect(season(at(2027, 1, 8, 16))).toBe('friday')
+  // Diwali is skipped: early November (a Sunday afternoon is only the weekend look).
+  expect(season(at(2026, 11, 8, 12))).toBe('weekend')
+  expect(season(at(2026, 11, 4, 12))).toBeUndefined()
+})
+
+test('season(): a forced name wins, an unknown name is ignored (the test switch, default off)', () => {
+  expect(season(at(2026, 11, 18, 12), 'christmas')).toBe('christmas')
+  expect(season(at(2026, 11, 18, 12), 'sundayNight')).toBe('sundayNight')
+  expect(season(at(2026, 11, 18, 12), 'nonsense')).toBeUndefined()
+  expect(season(at(2026, 11, 18, 12), '')).toBeUndefined()
+})
+
+test('calendar lines: eight to ten a season, short, certain, no "or", all different, not shared with the working lines', () => {
+  const working = new Set(Object.values(LINES).flat())
+  for (const [s, ls] of Object.entries(SEASON_LINES)) {
+    expect([s, ls.length >= 8 && ls.length <= 10]).toEqual([s, true])
+    expect(new Set(ls).size).toBe(ls.length)
+    for (const l of ls) { expect(l.length).toBeLessThanOrEqual(60); expect(l).not.toMatch(/ or /i); expect(working.has(l)).toBe(false) }
+  }
+  expect(Object.keys(SEASON_LINES).sort()).toEqual(['christmas', 'friday', 'newYear', 'sundayNight', 'weekend'])
+})
+
+test('pickLine: a calendar line about one time in four, the working line otherwise; never for a mood a season leaves alone', () => {
+  let cal = 0
+  for (let ms = 0; ms < 400; ms++) if (SEASON_LINES.friday.includes(pickLine('idle', ms, 'friday'))) cal++
+  expect(cal).toBeGreaterThan(70); expect(cal).toBeLessThan(130)
+  // Without a season it is exactly the old pick.
+  for (const m of ['idle', 'think', 'done'] as const) expect(pickLine(m, 1234)).toBe(LINES[m][1234 % LINES[m].length])
+  // Weekday looks touch idle, doze and done only; the working looks keep their own lines.
+  for (let ms = 0; ms < 60; ms++) for (const m of ['think', 'build', 'test'] as const) expect(LINES[m]).toContain(pickLine(m, ms, 'sundayNight'))
+  // Christmas lines may colour any mood.
+  let xm = 0
+  for (let ms = 0; ms < 400; ms++) if (SEASON_LINES.christmas.includes(pickLine('think', ms, 'christmas'))) xm++
+  expect(xm).toBeGreaterThan(70)
+})
+
+// 17 Nov 2026: neither side was wrong; Praj asked for seven scenes per look.
+test('takes and take: calendar moods gain seven scenes; costume looks add none', () => {
+  expect([takes('idle'), takes('idle', 'friday'), takes('done', 'friday'), takes('doze', 'friday')]).toEqual([4, 11, 11, 4])
+  expect([takes('doze', 'weekend'), takes('idle', 'sundayNight'), takes('doze', 'sundayNight')]).toEqual([11, 11, 4])
+  expect([takes('idle', 'christmas'), takes('done', 'newYear'), takes('think', 'weekend')]).toEqual([4, 4, 9])
+  const c = { ...START, lastActive: 0 }
+  // `done` shows its calendar take every time; idle plays it on every second slot, 42 s each.
+  expect(take(c, 1000, 'done', 'friday')).toBeGreaterThanOrEqual(4)
+  const idleTakes = new Set([0, 1, 2, 3, 4, 5].map(k => take(c, k * 42_000, 'idle', 'weekend')))
+  expect([...idleTakes].some(t => t >= 4)).toBe(true); expect([...idleTakes].every(t => t >= 0 && t < 11)).toBe(true)
+  // No season, no change.
+  expect(take(c, 1000, 'idle')).toBe(take(c, 1000, 'idle', undefined))
+})
+
+test('calendar art: every season draws every mood, each costume differs from the plain art, still well-formed, hover meaning untouched', () => {
+  const MOODS = Object.keys(MEANING) as Mood[]
+  for (const s of ['friday', 'weekend', 'sundayNight', 'christmas', 'newYear'] as const) {
+    let differs = 0
+    for (const m of MOODS) {
+      const plain = crabArt(m, 0), dressed = crabArt(m, 0, s)
+      expect(dressed.startsWith('<svg')).toBe(true)
+      if (dressed !== plain) differs++
+      const stageSvg = stage(m, 0, STATION[m], MEANING[m], undefined, s)
+      expect(stageSvg).toContain(MEANING[m].replace(/&/g, '&amp;'))
+    }
+    // Christmas and New Year dress every mood; the weekday looks only the moods they own.
+    expect([s, differs >= (s === 'christmas' || s === 'newYear' ? MOODS.length : 2)]).toEqual([s, true])
+  }
+  for (const m of ['think', 'build', 'test'] as const) expect(crabArt(m, 0, 'friday')).toBe(crabArt(m, 0))
+})
+
+// 0.12.0 S5, Layer A (pure CSS, pet and cursor). Layer B (a press reaching a hook) is blocked: see CONTEXT.md.
+import { PET_LINES, PET_RARE, petLine } from './hooks/crab.ts'
+
+test('pet lines: ten short ones and one rare, certain, no "or", none shared with the working or calendar lines', () => {
+  const used = new Set([...Object.values(LINES).flat(), ...Object.values(SEASON_LINES).flat()])
+  expect(PET_LINES.length).toBe(10)
+  expect(new Set(PET_LINES).size).toBe(10)
+  for (const l of [...PET_LINES, PET_RARE]) { expect(l.length).toBeLessThanOrEqual(34); expect(l).not.toMatch(/ or /i); expect(used.has(l)).toBe(false) }
+  expect(PET_LINES).not.toContain(PET_RARE)
+})
+
+test('petLine: the rare line about one pet in 25, the others spread over all ten', () => {
+  const picks = Array.from({ length: 2500 }, (_, i) => petLine(i))
+  expect(picks.filter(l => l === PET_RARE).length).toBe(100)
+  expect(new Set(picks.filter(l => l !== PET_RARE)).size).toBe(10)
+  expect(petLine(7)).toBe(petLine(7))
+})
+
+test('stage: pointer zones make the eyes look, a near pointer sidesteps, the crab itself waves, a press hops; none stops the walk', () => {
+  const svg = stage('idle', 0, 1, 'Idle: waiting for your message')
+  // Invisible hover zones left and right of the crab (the eyes look that way), and one over the crab itself.
+  expect(svg).toMatch(/class="st-zl"/); expect(svg).toMatch(/class="st-zr"/); expect(svg).toMatch(/class="st-zc"/)
+  expect(svg).toMatch(/\.st-zl:hover/); expect(svg).toMatch(/\.st-zr:hover/); expect(svg).toMatch(/\.st-zc:hover/)
+  // A press (:active) hops or squishes, and shows the pet line in a bubble that is hidden otherwise.
+  expect(svg).toMatch(/:active/)
+  expect(svg).toMatch(/class="st-pet"/)
+  expect(PET_LINES.concat(PET_RARE).some(l => svg.includes(l))).toBe(true)
+  expect(svg).toMatch(/\.st-pet\{[^}]*opacity:0/)
+  // The walk and the wander still sit on their own groups; no hover rule touches `.st-at`'s own transform.
+  expect(svg).toContain('class="st-at"')
+  expect(svg).not.toMatch(/\.st-at:hover\{[^}]*transform/)
+  expect(svg).not.toMatch(/animation-play-state/)
+  // Zones are invisible and carry no fill that shows.
+  expect(svg).toMatch(/\.st-zl,\.st-zr,\.st-zc\{[^}]*fill:transparent|\.st-z[lrc][^{]*\{[^}]*fill:transparent/)
+})
+
+test('stage: the pet effects are costume on the look: no mood changes, the label and hover meaning stay, and reduced motion stills them', () => {
+  for (const m of Object.keys(MEANING) as Mood[]) {
+    const svg = stage(m, 0, STATION[m], MEANING[m])
+    expect(svg).toContain(MEANING[m].replace(/&/g, '&amp;'))
+    expect(svg).toMatch(/@media \(prefers-reduced-motion:reduce\)[^]*st-z/)
+  }
+  // The bubble line is a property of the look, so it never changes while the look stands (no redraw needed).
+  expect(stage('think', 2, .85, 'Thinking')).toBe(stage('think', 2, .85, 'Thinking'))
+})
+
+test('stage: pointer rules fire on the right pointer state, in the right direction, and stay still for reduced motion', () => {
+  const svg = stage('think', 0, STATION.think, MEANING.think)
+  // The bubble and the hop come from a press (:active); the wave and the sidestep from hovering.
+  expect(svg).toContain('.st-zc:active~.st-pet{opacity:1')
+  expect(svg).not.toContain('.st-zc:hover~.st-pet')
+  expect(svg).toContain('.st-zc:active~.st-look .st-hop{')
+  expect(svg).not.toContain('.st-zc:hover~.st-look .st-hop')
+  expect(svg).toContain('.st-zc:hover~.st-look .st-wave{')
+  // The bubble lingers 2.2 s after the press. Was 1.2 s until 17 Nov: neither side was wrong, Praj asked for a press
+  // that pays off (live: "it jumps a little and very quick, nothing engaging"), and 1.2 s was too short to read.
+  expect(svg).toContain('.st-pet{opacity:0;transition:opacity .15s 2.2s}')
+  // The crab steps away from the pointer, and the eyes look toward it.
+  expect(svg).toContain('.st-zl:hover~.st-look{transform:translateX(3px)}')
+  expect(svg).toContain('.st-zr:hover~.st-look{transform:translateX(-3px)}')
+  expect(svg).toContain('.st-zl:hover~.st-look .st-ey{transform:translateX(-1.5px)}')
+  expect(svg).toContain('.st-zr:hover~.st-look .st-ey{transform:translateX(1.5px)}')
+  // The zones must catch the pointer although they are transparent.
+  expect(svg).toContain('.st-zl,.st-zr,.st-zc{fill:transparent;pointer-events:all}')
+  // Reduced motion stills the wave and the hop too.
+  const still = svg.slice(svg.indexOf('@media (prefers-reduced-motion:reduce){.st-pw'))
+  expect(still).toContain('.st-look .st-wave')
+  expect(still).toContain('.st-look .st-hop')
+})
+
+// 0.12.0 S13 (Praj, 17 Nov, live: "it just pops up the caption... it jumps a little and very quick, nothing engaging").
+// A press now squashes the crab while held; letting go springs it up with bounces, hearts fly out of its sides, and
+// happy eyes linger. Still CSS only: a press cannot reach a hook.
+test('pet: a press squashes the crab at its feet, and letting go springs it back with bounces and a jump', () => {
+  const svg = stage('idle', 0, STATION.idle, MEANING.idle)
+  // Held: wider and shorter, scaled about the feet so it never leaves the floor.
+  const [, sx, sy] = svg.match(/\.st-zc:active~\.st-look \.st-hop\{transform:scale\(([\d.]+),([\d.]+)\)/)!
+  expect(+sx).toBeGreaterThan(1); expect(+sy).toBeLessThan(.9)
+  expect(svg).toMatch(/\.st-hop\{transform-origin:26px 38\.5px;/)
+  // Released: the way back is a spring (a linear() curve that passes 1 and comes back more than once).
+  const spring = (cls: string) => svg.match(new RegExp(`\\.${cls}\\{[^}]*transition:transform ([\\d.]+)s linear\\(([^)]*)\\)`))!
+  const [, hopFor, hopCurve] = spring('st-hop')
+  expect(+hopFor).toBeGreaterThanOrEqual(.7)
+  expect(hopCurve.split(',').filter(v => parseFloat(v) > 1).length).toBeGreaterThanOrEqual(2)
+  // The jump is its own group: it sinks a little while held and overshoots upward by at least 4 px on release.
+  const [, down] = svg.match(/\.st-zc:active~\.st-look \.st-jmp\{transform:translateY\(([\d.]+)px\)/)!
+  const peak = Math.max(...spring('st-jmp')[2].split(',').map(v => parseFloat(v)))
+  expect(+down * (peak - 1)).toBeGreaterThanOrEqual(4)
+  // The squash itself lands fast, so a quick click still shows it.
+  expect(svg).toMatch(/\.st-zc:active~\.st-look \.st-hop\{[^}]*transition:transform \.0\ds/)
+  expect(svg).toContain('<g class="st-look"><g class="st-perk"><g class="st-jmp"><g class="st-hop">')
+})
+
+test('pet: happy eyes and a blush show from the press and linger; the open eyes hide meanwhile', () => {
+  const svg = stage('think', 0, STATION.think, MEANING.think)
+  expect(svg).toMatch(/<g class="st-joy">.*?<path[^>]*>.*?<path[^>]*>/)
+  expect(svg).toMatch(/\.st-joy\{opacity:0;transition:opacity 0s 1\.4s\}/)
+  expect(svg).toContain('.st-zc:active~.st-look .st-joy{opacity:1;transition:none}')
+  expect(svg).toContain('.st-zc:active~.st-look .st-ey{opacity:0;transition:none}')
+  expect(svg).toMatch(/\.st-ey\{transition:transform \.15s ease-out,opacity 0s 1\.4s\}/)
+  expect(svg).not.toMatch(/\.st-zc:hover~\.st-look \.st-joy/)
+})
+
+test('pet: hearts wait at the sides of the crab on a press, fly out on release, and stream while it is held', () => {
+  const svg = stage('idle', 0, STATION.idle, MEANING.idle)
+  const burst = svg.match(/<g class="st-hb">(.*?)<\/g><g class="st-hs">/)![1]
+  expect(burst.match(/class="st-h\d"/g)!.length).toBeGreaterThanOrEqual(5)
+  // At rest they are parked away and invisible; a press snaps them to the crab, visible, with no transition.
+  expect(svg).toMatch(/\.st-hb>\*\{opacity:0;[^}]*transition:transform [\d.]+s [^}]*,opacity/)
+  expect(svg).toMatch(/\.st-zc:active~\.st-look \.st-hb>\*\{opacity:1;transform:scale\(\.6\);transition:none\}/)
+  for (const k of [1, 2, 3, 4, 5]) expect(svg).toMatch(new RegExp(`\\.st-h${k}\\{transform:translate\\(-?[\\d.]+px,-?[\\d.]+px\\)`))
+  // Nothing of the burst may rise into the caption lane (the top 13.67 px): start y plus the travel stays below it.
+  const marks = [...burst.matchAll(/<g class="st-h(\d)"><rect x="[-\d.]+" y="([\d.]+)"/g)]
+  expect(marks.length).toBe(5)
+  for (const [, k, y] of marks) {
+    const dy = +svg.match(new RegExp(`\\.st-h${k}\\{transform:translate\\(-?[\\d.]+px,(-?[\\d.]+)px\\)`))![1]
+    expect(+y + dy).toBeGreaterThanOrEqual(14.5)
+  }
+  // No transform attribute on them: the CSS transform would replace it and drop them at the stage corner.
+  expect(burst).not.toContain('transform=')
+  // Held past a moment, more hearts rise in a loop; they start only on a press, never on hover.
+  expect(svg).toMatch(/\.st-zc:active~\.st-look \.st-hs>\*\{animation:st-rise [\d.]+s ease-out \.35s infinite/)
+  expect(svg).toContain('.st-hs>*{opacity:0}')
+  expect(svg).not.toMatch(/:hover[^{,]*\.st-h[bs]/)
+})
+
+test('pet: at a station on the edge of the stage, the hearts flying outward stop inside the crab box', () => {
+  const ends = (svg: string) => [1, 2, 3, 4, 5].map(k => {
+    const x = +svg.match(new RegExp(`<g class="st-h${k}"><rect x="([\\d.]+)"`))![1]
+    return x + +svg.match(new RegExp(`\\.st-h${k}\\{transform:translate\\((-?[\\d.]+)px`))![1]
+  })
+  // Idle stands at the right edge (station 1): nothing ends past the 52 px box. In the middle they fly wide.
+  expect(STATION.idle).toBe(1)
+  expect(Math.max(...ends(stage('idle', 0, 1, MEANING.idle)))).toBeLessThanOrEqual(49)  // a mark's first rect, at most 3 px wide
+  expect(Math.min(...ends(stage('idle', 0, 1, MEANING.idle)))).toBeLessThan(-5)
+  const mid = (Object.keys(STATION) as Mood[]).find(m => STATION[m] > .2 && STATION[m] < .8)!
+  expect(Math.max(...ends(stage(mid, 0, STATION[mid], MEANING[mid])))).toBeGreaterThan(55)
+  const left = (Object.keys(STATION) as Mood[]).find(m => STATION[m] < .05)
+  if (left) expect(Math.min(...ends(stage(left, 0, STATION[left], MEANING[left])))).toBeGreaterThanOrEqual(0)
+})
+
+test('pet: the pointer arriving on the crab makes it perk up once and look up; reduced motion keeps all of it still', () => {
+  const svg = stage('idle', 0, STATION.idle, MEANING.idle)
+  expect(svg).toMatch(/\.st-zc:hover~\.st-look \.st-perk\{animation:st-perk \.5s ease-out\}/)
+  expect(svg).toMatch(/@keyframes st-perk\{/)
+  expect(svg).toContain('.st-zc:hover~.st-look .st-ey{transform:translateY(-1px)}')
+  expect(svg).toContain('.st-zc{cursor:pointer}')
+  // Held, it purrs; only a press starts the purr, never a hover.
+  expect(svg).toMatch(/\.st-zc:active~\.st-look \.st-perk\{animation:st-purr /)
+  expect(svg).not.toMatch(/:hover~\.st-look \.st-perk\{animation:st-purr/)
+  const still = svg.slice(svg.indexOf('@media (prefers-reduced-motion:reduce){.st-pw'))
+  for (const cls of ['.st-look .st-jmp', '.st-look .st-perk', '.st-look .st-hs>*', '.st-look .st-hb>*']) expect(still).toContain(cls)
+})
+
+// 0.12.0 S8: the string lights ran 100 px of a stage that is wider; they must span the whole width, with bulbs.
+test('christmas: string lights span the full stage width, have bulbs, blink, and stand still under reduced motion', () => {
+  const xmas = stage('idle', 0, STATION.idle, MEANING.idle, undefined, 'christmas', 2026)
+  expect(xmas).toContain('class="st-lt"')
+  expect(xmas).toMatch(/<rect class="st-lt" width="100%"/)
+  expect(xmas).toContain('<pattern')
+  expect(xmas).toMatch(/@media \(prefers-reduced-motion:reduce\)[^]*\.st-lt[^}]*animation:none/)
+  for (const s of [undefined, 'friday', 'weekend', 'sundayNight', 'newYear'] as const)
+    expect(stage('idle', 0, STATION.idle, MEANING.idle, undefined, s, 2026)).not.toContain('st-lt')
+})
+
+// 0.12.0 S8: the Sunday-night calendar page read as an "L" in Chromium; it must read MON. 17 Nov 11:10: the pixel M
+// with a tiny "ON" beside it stuck out past the SUN page, so MON is now set in SUN's letters (the old pixel
+// expectations were the stale side).
+test('sundayNight: the calendar page reads MON in the same letters as SUN', () => {
+  for (const m of ['idle', 'done'] as const) {
+    // 17 Nov 2026: neither side was wrong; Praj asked for seven scenes per look.
+    const svg = crabArt(m, 4, 'sundayNight')
+    expect(svg).toMatch(/class="cb-mon-page"><text x="-4.7" y="19" font-family="sans-serif" font-size="3.3"[^>]*>MON<\/text>/)
+    expect(svg).not.toContain('>ON</text>')
+  }
+})
+
+// 0.12.0 S8: seen in Chromium, light theme: white costume pieces (hat brim, pompom, snow, chair seat, page) vanished.
+test('calendar costume and set pieces never use the near-white, which disappears on the light theme', () => {
+  const white = (svg: string) => (svg.match(/#F4F3EE/g) ?? []).length
+  for (const s of ['friday', 'weekend', 'sundayNight', 'christmas', 'newYear'] as const) for (const m of ['idle', 'done', 'doze'] as const) {
+    const idx = takes(m, s) - 1
+    // The season may add pieces but no near-white one: no more than the mood's own ordinary takes already have.
+    const own = Math.max(...Array.from({ length: idx }, (_, t) => white(crabArt(m, t))))
+    expect([s, m, white(crabArt(m, idx, s, 2027)) <= own]).toEqual([s, m, true])
+  }
+})
+
+test('the weekend chair seat is not near-white and the wire of the christmas lights spans the stage too', () => {
+  // 17 Nov 2026: neither side was wrong; Praj asked for seven scenes per look.
+  expect(crabArt('doze', 4, 'weekend')).not.toMatch(/y="18" width="6" height="1" fill="#F4F3EE"/)
+  expect(stage('idle', 0, STATION.idle, MEANING.idle, undefined, 'christmas', 2026)).toContain('<rect width="100%" height="9" fill="url(#st-lw)"/>')
+})
+
+// One caption at a time (Praj, 17 Nov, live: the hover label and the pet bubble showed together). The pet line takes
+// the label's own lane and covers it: same top lane, drawn after the label, at least as wide, on the same side.
+// This replaces the 03:00 test that put the bubble beside the crab; that test was the stale side.
+test('the pet line covers the hover label, so only one caption shows', () => {
+  for (const m of Object.keys(STATION) as Mood[]) {
+    const svg = stage(m, 0, STATION[m], MEANING[m])
+    const box = (cls: string) => svg.match(new RegExp(`<g class="${cls}">[^]*?<rect x="(-?[\\d.]+)" y="([\\d.]+)" width="([\\d.]+)" height="([\\d.]+)"`))!.slice(1).map(Number)
+    const [lx, ly, lw, lh] = box('st-tip'), [px, py, pw, ph] = box('st-pet')
+    expect([py, ph]).toEqual([ly, lh])
+    expect(px).toBeLessThanOrEqual(lx)
+    expect(px + pw).toBeGreaterThanOrEqual(lx + lw)
+    expect(py + ph).toBeLessThanOrEqual(13.67)  // the art's clear top: never over the crab
+    expect(svg.indexOf('class="st-pet"')).toBeGreaterThan(svg.indexOf('class="st-tip"'))
+  }
+})
+
+// Authored acting: scene props belong to the selected look, with quiet, visible stills.
+test('Friday calendar takes watch five, drop shades and sip; only done tosses a briefcase', () => {
+  for (const m of ['idle', 'done'] as const) {
+    const svg = crabArt(m, 4, 'friday')
+    for (const cls of ['cb-clock', 'cb-clock-hand', 'cb-shades', 'cb-sip', 'cb-straw']) expect(svg).toContain(`class="${cls}"`)
+    expect(svg.includes('class="cb-briefcase"')).toBe(m === 'done')
+    expect(crabArt(m, 0, 'friday')).not.toContain('class="cb-clock"')
+  }
+})
+test('Sunday calendar takes flip SUN to MON, hold a glance, sigh and set a ringing alarm', () => {
+  for (const m of ['idle', 'done'] as const) {
+    const svg = crabArt(m, 4, 'sundayNight')
+    for (const cls of ['cb-calendar', 'cb-sun-page', 'cb-mon-page', 'cb-sigh', 'cb-alarm', 'cb-alarm-hand']) expect(svg).toContain(`class="${cls}"`)
+    expect(svg).toContain('>SUN</text>'); expect(svg).toContain('>MON</text>')
+    expect(svg).toContain('36%,44%{transform:translateX(-2px)}') // 1.12 s of disbelief
+  }
+})
+test('weekend calendar takes share shades, a cooler, deck chair and a slow sip, including doze', () => {
+  for (const m of ['idle', 'doze', 'done'] as const) {
+    const svg = crabArt(m, 4, 'weekend')
+    for (const cls of ['cb-shades', 'cb-cooler', 'cb-chair', 'cb-sip']) expect(svg).toContain(`class="${cls}"`)
+    expect(svg).toContain('class="cb-recline"')
+    expect(svg).not.toContain('cb-em1')
+  }
+})
+test('New Year separates year and hat and done launches two rising bursting fireworks', () => {
+  const idle = crabArt('idle', 0, 'newYear', 2027)
+  // 17 Nov 11:10: at y 12 the year still sat under idle's prop in Chromium; it stands in the top-left corner now.
+  expect(idle).toContain('<text class="cb-year" x="-5.5" y="5"')
+  expect(idle).toContain('class="cb-party-hat"')
+  const done = crabArt('done', 0, 'newYear', 2027)
+  expect(done.match(/class="cb-rocket"/g)?.length).toBe(2)
+  expect(done.match(/class="cb-firework"/g)?.length).toBe(2)
+  expect(done).toContain('animation-delay:5s')
+})
+test('Christmas done has the same full width wire and bulbs as idle, below the caption lane', () => {
+  for (const m of ['idle', 'done'] as const) {
+    const svg = stage(m, 0, STATION[m], '', undefined, 'christmas')
+    expect(svg).toContain('<g transform="translate(0,14)"><defs><pattern id="st-lw"')
+    expect(svg).toContain('<rect class="st-lt" width="100%"')
+  }
+})
+test('six second takes have distinct scenes, keeping the first takes', () => {
+  for (const [m, cls] of [['browse', 'cb-scrollbar'], ['mcp', 'cb-sockets'], ['plan', 'cb-pinboard'], ['skill', 'cb-scroll'], ['sync', 'cb-arrows'], ['ship', 'cb-parachute']] as const) {
+    expect(crabArt(m, 1)).toContain(`class="${cls}"`)
+    expect(crabArt(m, 0)).not.toContain(`class="${cls}"`)
+    expect(crabArt(m, 1)).not.toContain('class="cb-motion"')
+  }
+})
+test('test results hold the claw and result for .8 s before moving or blinking', () => {
+  for (const m of ['testp', 'testf'] as const) {
+    const svg = crabArt(m, 0)
+    expect(svg).toContain(`.cb-${m} .cb-ar{animation:cb-result-arm 14s`)
+    expect(svg).toContain(`.cb-${m} .cb-pr{animation:none}`)
+    expect(svg).toContain('0%,5.72%{transform:none}')
+  }
+  expect(stage('testf', 0, .5)).toContain('0%,40%{transform:none}')
+})
+test('authored scenes keep props visible with every new animation stopped for reduced motion', () => {
+  const svgs = [
+    ...(['friday', 'sundayNight', 'weekend'] as const).flatMap(s => (['idle', 'done'] as const).flatMap(m => Array.from({ length: 7 }, (_, i) => crabArt(m, 4 + i, s)))),
+    ...Array.from({ length: 7 }, (_, i) => crabArt('doze', 4 + i, 'weekend')), crabArt('idle', 0, 'newYear', 2027), crabArt('done', 0, 'newYear'),
+    ...(['browse', 'mcp', 'plan', 'skill', 'sync', 'ship'] as const).map(m => crabArt(m, 1)),
+  ]
+  for (const svg of svgs) {
+    expect(svg).toContain('@media (prefers-reduced-motion:reduce){.cb *{animation:none!important}}')
+    expect(svg).toContain('.cb-authored *{animation:none!important}')
+    expect(svg).toContain('.cb-authored .cb-sun-page{display:none}')
+    expect(svg).toContain('.cb-authored .cb-shades{transform:none}')
+  }
+})
+
+test('authored rect geometry fits the 52 by 41 box below its 13.67 px caption lane', () => {
+  const svgs = [
+    ...(['friday', 'sundayNight', 'weekend'] as const).flatMap(s => (['idle', 'done'] as const).flatMap(m => Array.from({ length: 7 }, (_, i) => crabArt(m, 4 + i, s)))),
+    ...Array.from({ length: 7 }, (_, i) => crabArt('doze', 4 + i, 'weekend')), crabArt('idle', 0, 'newYear', 2027), crabArt('done', 0, 'newYear'),
+    ...(['browse', 'mcp', 'plan', 'skill', 'sync', 'ship'] as const).map(m => crabArt(m, 1)),
+  ]
+  for (const svg of svgs) for (const rect of svg.matchAll(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)) {
+    const [x, y, w, h] = rect.slice(1).map(Number)
+    // The art's own box (viewBox -6 -2 38 30). A y >= 8 floor here squashed the holiday hats to two rows (17 Nov,
+    // the orchestrator's brief was wrong, not the hats): a hat stands on the head, above y 8.
+    expect([x >= -6, x + w <= 32, y >= -2, y + h <= 28]).toEqual([true, true, true, true])
+  }
+})
+test('Friday last tick and shades share the release; failed-test stage holds for .8 s', () => {
+  const svg = crabArt('idle', 4, 'friday')
+  expect(svg).toContain('72%,100%{transform:rotate(0)}')
+  expect(svg).toContain('72%,100%{transform:none;opacity:1}')
+  expect(where('testf', .5, .8)).toBe(.5)
+  const failed = stage('testf', 0, .5)
+  expect(failed).toContain('.st-roam .cb:not(.cb-walk) .cb-la{animation:cb-st .4s ease-in-out 0.8s')
+})
+test('result first takes also hold the walk-in for .8 s, with where matching the delayed walk', () => {
+  for (const m of ['testp', 'testf'] as const) {
+    expect(where(m, 0, .8, 0)).toBe(0)
+    expect(where(m, 0, 1.2, 0)).toBeGreaterThan(0)
+    expect(stage(m, 0, 0)).toContain('0%,25%{transform:translateX(calc((100% - 52px) * 0))}')
+  }
+})
+
+import { PROFILE, trait, traitLine, TRAIT_LINES, projectKey, greeting } from './hooks/crab.ts'
+import type { Profile, Trait } from './types'
+
+test('session profile survives turns and counts successful work, test results, fixes and failures', () => {
+  let c = step(START, { kind: 'turnStart' }, 0)
+  const end = (mood: Mood, isError = false, file?: string, command = false) => {
+    c = step(c, { kind: 'tool', mood }, 1)
+    c = step(c, { kind: 'toolEnd', mood, isError, file, command }, 2)
+  }
+  end('build', false, '/private/a'); end('build', false, '/private/a'); end('build', true, '/b')
+  end('read'); end('web'); end('sub'); end('build', true, undefined, true)
+  end('test', true, undefined, true)
+  c = step(step(c, { kind: 'turnEnd' }, 3), { kind: 'turnStart' }, 4)
+  end('test', false, undefined, true); end('test', false, undefined, true)
+  end('ship'); end('ship', true, undefined, true)
+  expect(c.profile).toEqual({ edits: 2, reads: 1, green: 2, red: 1, web: 1, subs: 1, failedCommands: 3, fixes: 1, ships: 1 })
+  expect(START.profile).toEqual(PROFILE)
+  expect(JSON.stringify(c.profile)).not.toContain('/private')
+})
+
+test('trait thresholds use activity shares, with ties in tester builder reader surfer manager fixer order', () => {
+  const cases: [Trait, Partial<Profile>, Partial<Profile>][] = [
+    ['tester', { green: 4 }, { green: 4, red: 1 }], ['builder', { edits: 14 }, { edits: 15 }],
+    ['reader', { reads: 29 }, { reads: 30 }], ['surfer', { web: 7 }, { web: 8 }],
+    ['manager', { subs: 4 }, { subs: 5 }], ['fixer', { fixes: 2 }, { fixes: 3 }],
+  ]
+  for (const [name, below, enough] of cases) {
+    expect(trait({ ...PROFILE, ...below })).toBeUndefined()
+    expect(trait({ ...PROFILE, ...enough })).toBe(name)
+  }
+  const p = { ...PROFILE, green: 30, edits: 30, reads: 30, web: 30, subs: 30, fixes: 30 }
+  for (const [name, field] of [['tester', 'green'], ['builder', 'edits'], ['reader', 'reads'], ['surfer', 'web'], ['manager', 'subs'], ['fixer', 'fixes']] as const) {
+    expect(trait(p)).toBe(name); p[field] = 0
+  }
+  expect(trait({ ...PROFILE, green: 5, edits: 16 })).toBe('builder')
+})
+
+test('trait captions have six to eight templates, use only actual profile counts, one pick in four in idle done think', () => {
+  const p = { ...PROFILE, edits: 47, reads: 53, green: 19, red: 11, web: 23, subs: 13, fixes: 7 }
+  const allowed = new Set(Object.values(p).map(String).concat(String(p.green + p.red)))
+  for (const name of Object.keys(TRAIT_LINES) as Trait[]) {
+    expect(TRAIT_LINES[name].length >= 6 && TRAIT_LINES[name].length <= 8).toBe(true)
+    for (const template of TRAIT_LINES[name]) {
+      const line = template(p)
+      expect(line.match(/\d+/g)?.length).toBeGreaterThan(0)
+      for (const n of line.match(/\d+/g) ?? []) expect(allowed.has(n)).toBe(true)
+    }
+  }
+  const builder = { ...PROFILE, edits: 47 }
+  for (const mood of ['idle', 'done', 'think'] as const) {
+    expect(Array.from({ length: 400 }, (_, i) => traitLine(mood, i, builder)).filter(Boolean).length).toBe(100)
+  }
+  for (const mood of MOODS.filter(m => !['idle', 'done', 'think'].includes(m))) expect(traitLine(mood, 0, builder)).toBeUndefined()
+  expect(traitLine('idle', 0, PROFILE)).toBeUndefined()
+})
+
+test('trait items draw only in idle and done, calendar hats take precedence, hover meaning stays', () => {
+  for (const name of Object.keys(TRAIT_LINES) as Trait[]) for (const m of MOODS) {
+    for (let t = 0; t < takes(m); t++) {
+      const svg = crabArt(m, t, undefined, undefined, name)
+      expect(svg.includes(`class="cb-trait cb-trait-${name}"`)).toBe(m === 'idle' || m === 'done')
+    }
+    for (const s of ['christmas', 'newYear'] as const) {
+      // Festive costume takes precedence over session accessories.
+      expect(crabArt(m, 0, s, 2027, name).includes('class="cb-trait ')).toBe(false)
+    }
+    expect(stage(m, 0, STATION[m], MEANING[m], undefined, undefined, undefined, name)).toContain(MEANING[m])
+  }
+})
+
+test('project identity hashes cwd without retaining paths, greetings use stored counters and trait', () => {
+  expect(projectKey('/secret/project')).toMatch(/^p:[a-z0-9]+$/)
+  expect(projectKey('/secret/project')).toBe(projectKey('/secret/project'))
+  expect(projectKey('/elsewhere')).not.toBe(projectKey('/secret/project'))
+  const p = { v: 1 as const, sessions: 6, lastAt: 0, green: 12, red: 2, edits: 42, lastTrait: 'builder' }
+  expect(greeting(p, 0)).toBe('Session 7 on this project. Welcome back.')
+  expect(greeting(p, 1)).toBe('Back to the builder’s bench.')
+  expect(greeting(undefined, 0)).toBeUndefined()
+})
+
+// S14: all calendar scenes share the wall clock, without randomness or rapid repeats.
+test('calendar slots: seven unique scenes per cycle, stable inside a slot, idle alternates base and calendar', () => {
+  const c = { ...START, lastActive: 0 }
+  const start = Math.ceil(at(2026, 11, 21, 12) / 42_000)
+  for (const s of ['friday', 'weekend', 'sundayNight'] as const) {
+    const seq = Array.from({ length: 28 }, (_, i) => take(c, (start + i) * 42_000, 'done', s))
+    for (let i = 0; i < 21; i++) {
+      expect(new Set(seq.slice(i, i + 7)).size).toBe(7)
+      expect(seq[i]).toBeGreaterThanOrEqual(4); expect(seq[i]).toBeLessThan(11)
+      expect(seq[i]).toBe(seq[i + 7])
+      expect(take({ ...c, lastActive: 123 }, (start + i) * 42_000 + 40_000, 'done', s)).toBe(seq[i])
+      const idle = take(c, (start + i) * 42_000, 'idle', s)
+      if ((start + i) % 2) expect(idle).toBe(seq[i]); else expect(idle).toBeLessThan(4)
+    }
+    expect(new Set(seq.filter((_, i) => (start + i) % 2 === 1).slice(0, 7)).size).toBe(7)
+  }
+})
+test('calendar shuffle: local days change the order, midnight never repeats, independent of call order', () => {
+  const c = { ...START, lastActive: 0 }, orders = new Set<string>()
+  for (let d = 1; d <= 90; d++) {
+    const midnight = at(2026, 11, d, 0)
+    const firstSlot = Math.ceil(midnight / 42_000)
+    const seq = Array.from({ length: 7 }, (_, i) => take(c, (firstSlot + i) * 42_000, 'done', 'weekend'))
+    orders.add(seq.join(','))
+    expect(take(c, midnight, 'done', 'weekend')).not.toBe(take(c, midnight - 1, 'done', 'weekend'))
+    const last = take(c, midnight - 1, 'done', 'weekend')
+    expect(take(c, midnight, 'done', 'weekend')).not.toBe(last)
+    expect(seq).toEqual(Array.from({ length: 7 }, (_, i) => take(c, (firstSlot + i) * 42_000, 'done', 'weekend')))
+  }
+  expect(orders.size).toBeGreaterThan(20)
+})
+const CALENDAR_PROPS = {
+  friday: ['laptop', 'week-bar', 'ooo', 'disco', 'pizza', 'envelope'],
+  weekend: ['sandcastle', 'fishing', 'kite', 'ball', 'blanket', 'game'],
+  sundayNight: ['ironing', 'alarm-stack', 'inbox', 'battery', 'lunchbox', 'monday'],
+} as const
+test('calendar art: six new scenes per look have distinct props and authored body, eye and claw acting', () => {
+  for (const s of ['friday', 'weekend', 'sundayNight'] as const) for (const m of (s === 'weekend' ? ['idle', 'done', 'doze'] : ['idle', 'done']) as Mood[]) {
+    const svgs = Array.from({ length: 7 }, (_, i) => crabArt(m, 4 + i, s))
+    expect(new Set(svgs).size).toBe(7)
+    for (let i = 1; i <= 6; i++) {
+      const svg = svgs[i]
+      expect(svg).toContain(`class="cb-${CALENDAR_PROPS[s][i - 1]}"`)
+      expect(svg).toContain('cb-authored')
+      for (const part of ['cb-bd', 'cb-ey', 'cb-ar']) expect(svg).toContain(`.${part}{animation:`)
+      expect(svg).toContain('14s ease-in-out infinite')
+      expect(svg).not.toContain('#F4F3EE')
+      for (const rect of svg.matchAll(/<rect x="[^"]+" y="(-?[\d.]+)"/g)) expect(Number(rect[1])).toBeGreaterThanOrEqual(8)
+      for (const text of svg.matchAll(/<text([^>]*)>/g)) expect(text[1]).toContain('font-family="sans-serif"')
+    }
+  }
+})
+test('calendar captions: two distinct short lines for each new scene, deterministic and exclusive to its props', () => {
+  const all = new Set<string>()
+  for (const s of ['friday', 'weekend', 'sundayNight'] as const) {
+    for (let t = 5; t <= 10; t++) {
+      const lines = new Set(Array.from({ length: 80 }, (_, n) => pickLine('idle', n * 4, s, t)))
+      expect(lines.size).toBe(2)
+      for (const line of lines) {
+        expect(all.has(line)).toBe(false); all.add(line)
+        expect(line.length).toBeLessThanOrEqual(60); expect(line).not.toMatch(/\bor\b/i)
+        for (let other = 4; other <= 10; other++) if (other !== t) {
+          for (let n = 0; n < 8; n++) expect(pickLine('idle', n * 4, s, other)).not.toBe(line)
+        }
+        expect(pickLine('idle', 0, s, 0)).not.toBe(line)
+      }
+    }
+    for (const line of SEASON_LINES[s]) expect(line).not.toMatch(/deck chair|cooler|alarm clock|calendar|drink|tie|clock/i)
+    for (let n = 0; n < 32; n++) expect(pickLine('idle', n * 4, s, 5)).toBe(pickLine('idle', n * 4, s, 5))
+  }
+})
+
+test('calendar caption history: prop lines are discarded on a different scene, base take, mood or season', () => {
+  for (const s of ['friday', 'weekend', 'sundayNight'] as const) for (let i = 0; i < 7; i++) for (const line of CALENDAR_LINES[s][i]) {
+    expect(lineFitsScene(line, 'idle', s, 4 + i)).toBe(true)
+    expect(lineFitsScene(line, 'done', s, 4 + i)).toBe(true)
+    expect(lineFitsScene(line, 'doze', s, 4 + i)).toBe(s === 'weekend')
+    expect(lineFitsScene(line, 'idle', s, 0)).toBe(false)
+    expect(lineFitsScene(line, 'read', s, 4 + i)).toBe(false)
+    expect(lineFitsScene(line, 'idle', undefined, 4 + i)).toBe(false)
+    for (let j = 0; j < 7; j++) if (j !== i) expect(lineFitsScene(line, 'idle', s, 4 + j)).toBe(false)
+  }
+  expect(lineFitsScene('Friday has entered the chat.', 'read')).toBe(true)
 })

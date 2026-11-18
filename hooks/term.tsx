@@ -1,3 +1,4 @@
+import type { Season } from './crab.ts'
 // The crab for terminals (Praj, 12 Oct: "terminal friendly as well, for its wider appeal"). A Client module:
 // the terminal runs its frame clock, so the crab moves with no hook call per frame. Drawn in quadrant blocks,
 // two by two pixels a cell, on the welcome screen's own crab, with one-cell props beside and above it.
@@ -42,6 +43,12 @@ const LOOKS: Record<Mood, (f: number) => Look> = {
   codex: f => ({ legs: on(f, 2, 1), ch: [[4 - (Math.floor(f / 2) % 5), 1, '▣', B]] }),
   git: f => ({ ch: [[2, 1, '│', G], [2, 2, '│', G], [2, 0, '▕', G], [3, 0, on(f, 2, 1) ? '▶' : '▷', GRN]] }),
   inst: f => ({ legs: on(f, 2, 1), ch: [[3, on(f, 4, 2) ? 1 : 2, '▣', B]] }),
+  browse: f => ({ ch: [[1, 1, '▣', BLU], [on(f, 4, 2) ? 2 : 3, 1, '➤', WH]] }),
+  mcp: f => ({ ch: [[1, 1, '▣', G], [2, 1, on(f, 4, 2) ? '━' : '─', Y], [3, 1, '┤', G]] }),
+  plan: f => ({ ch: [[1, 0, '▤', B], [1, 1, on(f, 4, 2) ? '✓' : '□', GRN]] }),
+  skill: f => ({ ch: [[1, 1, '▥', WH], [2, 0, on(f, 4, 2) ? '✦' : '·', Y]] }),
+  sync: f => ({ ch: [[1, 0, '│', G], [3, 0, '│', G], [2, 1, on(f, 4, 2) ? '╲' : '╱', GRN], [1, 2, '│', G]] }),
+  ship: f => ({ legs: on(f, 2, 1), ch: [[1, 1, '▣', B], [2, 2, '╱', G]] }),
   ask: f => ({ claw: on(f, 4, 2), ch: on(f, 4, 3) ? [[13, 0, '?', BLU]] : [] }),
   long: f => ({ legs: on(f, 2, 1), ch: [[5, f % 3, '•', SKY]] }),
   comp: f => ({ squish: on(f, 4, 2) }),
@@ -50,9 +57,18 @@ const LOOKS: Record<Mood, (f: number) => Look> = {
   night: f => ({ dy: on(f, 16, 8) ? 0 : 1, ch: [[2, 0, '☾', '#FAC775'], ...(on(f, 6, 3) ? [[0, 1, '·', WH] as Glyph] : []), ...(on(f + 3, 6, 3) ? [[4, 0, '·', WH] as Glyph] : [])] }),
 }
 
+// Second takes (0.12.0): picked when the desktop's take index is odd. Same cells, different business.
+const LOOKS2: Partial<Record<Mood, (f: number) => Look>> = {
+  think: f => ({ eyes: on(f, 12, 6) ? 1 : -1, dy: f % 12 >= 9 ? 1 : 0, ch: [[3, 0, '?', DIM], ...(f % 12 > 5 ? [[2, 0, '·', DIM] as Glyph] : [])] }),
+  read: f => ({ eyes: on(f, 6, 3) ? 1 : -1, ch: [[2, 1, '▤', WH], [3, on(f, 4, 2) ? 1 : 2, '▪', G]] }),
+  test: f => ({ claw: on(f, 6, 3), dy: f % 6 === 4 ? 1 : 0, ch: [[13, 0, on(f, 4, 2) ? '·' : '∙', DIM], [12, 0, f % 8 > 3 ? '·' : ' ', DIM]] }),
+  build: f => ({ legs: on(f, 2, 1), px: [[1, 5, 8, 1, BR], ...(f % 12 >= 4 ? [[1, 4, 4, 1, BR2] as Rect] : []), ...(f % 12 >= 8 ? [[5, 4, 4, 1, BR] as Rect] : []),
+    [8, f % 6 < 3 ? 1 : 2, 1, 3, G]] }),
+}
+
 /** One frame of `mood`: ROWS rows of COLS cells. Pure, so tests read it as text. */
-export function frame(mood: Mood, f: number): Cell[][] {
-  const look = (LOOKS[mood] ?? LOOKS.idle)(f)
+export function frame(mood: Mood, f: number, season?: Season, take = 0): Cell[][] {
+  const look = ((take % 2 === 1 ? LOOKS2[mood] : undefined) ?? LOOKS[mood] ?? LOOKS.idle)(f)
   const W = COLS * 2, H = ROWS * 2
   const px: (string | undefined)[][] = Array.from({ length: H }, () => Array(W).fill(undefined))
   const put = (x: number, y: number, c: string) => { if (x >= 0 && x < W && y >= 0 && y < H) px[y][x] = c }
@@ -79,19 +95,23 @@ export function frame(mood: Mood, f: number): Cell[][] {
     return b ? { ch: QUAD[mask], fg: a, bg: b } : { ch: QUAD[mask], fg: a }
   }))
   for (const [cx, cy, ch, c] of look.ch ?? []) if (cells[cy]?.[cx]) cells[cy][cx] = { ch, fg: c }
+  if (season) {
+    const x = [13, 5, 4, 3, 2, 1, 0].find(i => cells[0][i].ch === ' ')
+    if (x !== undefined) cells[0][x] = { ch: ({ friday: '*', weekend: '~', sundayNight: '!', christmas: '^', newYear: '*' } as const)[season], fg: Y }
+  }
   return cells
 }
 
 type State = { f: number }
 
 // One Text per run of like-coloured cells: a row is a handful of runs, not fourteen elements.
-const Crab: ClientModule<{ mood: Mood }, State> = (props, surface) => {
+const Crab: ClientModule<{ mood: Mood; season?: Season; take?: number }, State> = (props, surface) => {
   if (surface.state === undefined) {
     surface.every(FRAME, () => surface.setState({ f: (surface.state?.f ?? 0) + 1 }))
     surface.setState({ f: 0 })
   }
   const { Box, Text } = surface.elements
-  const rows = frame(props.mood, surface.state?.f ?? 0)
+  const rows = frame(props.mood, surface.state?.f ?? 0, props.season, props.take)
   return (
     <Box flexDirection="column">
       {rows.map((row, y) => {

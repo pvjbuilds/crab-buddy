@@ -1,15 +1,15 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
-import type { Crab, Mood } from '../types'
-import { classify, step, shown, take, setLine, START, MEANING, LINES } from './crab.ts'
-import type { CrabEvent } from './crab.ts'
+import type { Crab, Mood, Trait, ProjectMemory } from '../types'
+import { classify, step, shown, take, takes, setLine, tally, START, MEANING, LINES, season, pickLine, lineFitsScene, trait, traitLine, projectKey, greeting, PROFILE } from './crab.ts'
+import type { CrabEvent, Season } from './crab.ts'
 import { crabArt, stageArt, where, STATION } from './art.ts'
 import { COLS, ROWS } from './term.tsx'
 
 const crab = atom({ plugin: 'crab-buddy', key: 'crab' } as const, START)
 // What the crab acts out, which take, since when, the caption log (newest first) and the stage spot it walks
 // in from. `seed` is the crab's lastActive when the look came up, so the take clock keeps counting from there.
-type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number; seed?: number }
+type Look = { mood: Mood; take: number; at: number; log: string[]; from?: number; seed?: number; season?: Season; year?: number; trait?: Trait; n?: { subs: number; files: number } }
 const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle', take: 0, at: 0, log: [], from: 1 } as Look)
 // Rapid changes flashed by too fast to read (Praj, 12 Oct): a look stays at least this long, then the crab
 // jumps to whatever is current. The same mood keeps its take until the take's own clock moves it on.
@@ -23,24 +23,53 @@ let began = 0
 const here = (x: Look, now: number) => (x.at || began) > 0 ? where(x.mood, x.from ?? STATION[x.mood], (now - (x.at || began)) / 1000, x.take) : STATION[x.mood]
 // Every plugin's status line, by plugin, drawn in the crab's bar instead of the footer's "+1" overflow.
 const lines = atom({ plugin: 'crab-buddy', key: 'lines' } as const, {} as Record<string, string>)
+// Whether another plugin draws a row in the band (0.12.0 S15). The app asks each plugin for its own row, so the
+// crab's own `rest` no longer shows company; the band's arrangement (AbovePromptList) does.
+const company = atom({ plugin: 'crab-buddy', key: 'company' } as const, false)
 
 // The render reads only `look`, so the crab redraws when its mood or take changes and never in between.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function show($: any, c: Crab, now: number) {
   const was = await read($, look)
   const m = shown(c, now)
+  const s = season(now, await $.env.get('CRAB_SEASON').catch(() => undefined))
+  const date = new Date(now), year = date.getFullYear() + (date.getMonth() === 11 && date.getDate() === 31 ? 1 : 0)
+  const learned = trait(c.profile ?? PROFILE)
+  if (learned !== was.trait) await update($, look, x => ({ ...x, trait: learned }))
+  if (s !== was.season || (s === 'newYear' && year !== was.year)) {
+    await update($, look, x => {
+      const t = take({ ...c, lastActive: x.seed ?? c.lastActive }, now, x.mood, s)
+      const line = pickLine(x.mood, now, s, t)
+      const log = takes(x.mood, s) > takes(x.mood)
+        ? [line, ...x.log.filter(l => l !== line && lineFitsScene(l, x.mood, s, t))].slice(0, 2) : x.log
+      return { ...x, season: s, year, take: t, log }
+    })
+  }
+  // The stage's real counts (running subagents, files edited) ride in the look; the art redraws only when a count
+  // the current look draws changes, never in between.
+  const n = { subs: c.n.subs, files: c.n.files.length }
+  if (m === was.mood && ((m === 'sub' && n.subs !== was.n?.subs) || (m === 'build' && n.files !== was.n?.files))) {
+    await update($, look, x => ({ ...x, n, at: now, from: here(x, now) }))
+    return
+  }
   if (now - was.at < DWELL && (m === was.mood || !CUT.has(m))) return
   if (m === was.mood) {
     // A repeat (Read after Read) restarts lastActive, which would re-pick the take on every call. The look's own
     // seed, not `at`: `at` moves with each take, which cut every take after the first at 8 s (21 Oct).
-    const t = take({ ...c, lastActive: was.seed ?? was.at }, now, m)
-    if (t !== was.take) await update($, look, x => ({ ...x, take: t, at: now, from: here(x, now) }))
+    const t = take({ ...c, lastActive: was.seed ?? c.lastActive }, now, m, s)
+    if (t !== was.take) await update($, look, x => {
+      const line = pickLine(m, now, s, t)
+      const log = takes(m, s) > takes(m)
+        ? [line, ...x.log.filter(l => l !== line && lineFitsScene(l, m, s, t))].slice(0, 2) : x.log
+      return { ...x, take: t, seed: x.seed ?? c.lastActive, at: now, from: here(x, now), n, log }
+    })
     return
   }
-  const t = take(c, now, m)
+  const t = take(c, now, m, s)
   // A one-liner picked by the millisecond the mood came up; the caption scrolls down one line.
-  const line = LINES[m][now % LINES[m].length]
-  await update($, look, x => ({ mood: m, take: t, at: now, seed: c.lastActive, from: here(x, now), log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
+  // A session count gets one slot in four; otherwise done keeps its turn tally and other looks their one-liner.
+  const line = traitLine(m, now, c.profile ?? PROFILE) || (m === 'done' && tally(c)) || pickLine(m, now, s, t)
+  await update($, look, x => ({ mood: m, take: t, at: now, seed: c.lastActive, season: s, year, trait: learned, from: here(x, now), n, log: [line, ...x.log.filter(l => l !== line)].slice(0, 2) }))
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,11 +95,65 @@ const isEmpty = (n: unknown) => {
 // Subagents' own turns and tools stay out: the main loop's Agent call already shows the mini crab.
 const isSub = (e: unknown) => typeof (e as { agentId?: unknown }).agentId === 'string'
 
+// A crab error never disturbs a real tool call, permission dialog or compaction (0.12.0): a hook that throws is
+// skipped by the engine anyway, and this `.catch` registration makes it say so by running the rest in its place.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const through = (_$: any, e: any, next: (e: any) => any) => next(e)
+
+// Stored data is untrusted (including older versions). Copy only the declared counters.
+function projectRecord(value: unknown): ProjectMemory | undefined {
+  if (!value || typeof value !== 'object') return
+  const p = value as ProjectMemory
+  if (p.v !== 1 || ![p.sessions, p.lastAt, p.green, p.red, p.edits].every(n => Number.isSafeInteger(n) && n >= 0)) return
+  return { v: 1, sessions: p.sessions, lastAt: p.lastAt, green: p.green, red: p.red, edits: p.edits,
+    ...(typeof p.lastTrait === 'string' && ['tester', 'builder', 'reader', 'surfer', 'manager', 'fixer'].includes(p.lastTrait) ? { lastTrait: p.lastTrait } : {}) }
+}
+
+// One snapshot at session start. Totals are base + session counts, so turns never double-count.
+let memory: { key: string; base: ProjectMemory; oldest: { key: string; lastAt: number }[] } | undefined
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function remember($: any, now: number) {
+  if (!memory) return
+  try {
+    const { key, base, oldest } = memory, p = (await read($, crab)).profile ?? PROFILE
+    const learned = trait(p)
+    await $.store.set(key, { v: 1, sessions: base.sessions + 1, lastAt: now,
+      ...(learned ? { lastTrait: learned } : {}), green: base.green + p.green, red: base.red + p.red, edits: base.edits + p.edits })
+    // Compare every timestamp, including this project: the host clock may have moved back.
+    const candidates = [...oldest, { key, lastAt: now }].sort((a, b) => a.lastAt - b.lastAt || a.key.localeCompare(b.key))
+    while (candidates.length > 200) {
+      const dropped = candidates.shift()!
+      await $.store.delete(dropped.key)
+      const index = oldest.findIndex(p => p.key === dropped.key)
+      if (index >= 0) oldest.splice(index, 1)
+    }
+  } catch { memory = undefined }
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const now = await $.clock.now()
     await update($, crab, c => ({ ...c, lastActive: now }))
     began = now
+    memory = undefined
+    let welcome: string | undefined
+    // env failure disables persistence too. No store error reaches the session or its caption.
+    if (await $.env.get('CRAB_MEMORY').catch(() => 'off') !== 'off') {
+      try {
+        const key = projectKey(e.cwd), stored = projectRecord(await $.store.get(key))
+        const keys: string[] = await $.store.keys()
+        const oldest: { key: string; lastAt: number }[] = []
+        for (const other of keys.filter(k => k.startsWith('p:') && k !== key)) {
+          const record = projectRecord(await $.store.get(other))
+          oldest.push({ key: other, lastAt: record?.lastAt ?? 0 })
+        }
+        oldest.sort((a, b) => a.lastAt - b.lastAt || a.key.localeCompare(b.key))
+        memory = { key, base: stored ?? { v: 1, sessions: 0, lastAt: 0, green: 0, red: 0, edits: 0 }, oldest }
+        welcome = greeting(stored, now)
+      } catch { memory = undefined }
+    }
+    await show($, await read($, crab), now)
+    if (welcome) await update($, look, x => ({ ...x, log: [welcome!] }))
     // Timed moods (done, a test result, doze, night owl, long turn) change with no event; 1 s also ends a dwell on time.
     $.clock.every(1_000, () => retime($))
     return next(e)
@@ -83,7 +166,10 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     const r = await next(e)
-    if (!isSub(e)) await apply($, { kind: 'turnEnd' })
+    if (!isSub(e)) {
+      await apply($, { kind: 'turnEnd' })
+      await remember($, await $.clock.now())
+    }
     return r
   })
 
@@ -92,16 +178,18 @@ export const register: Register = on => {
     const m = classify(String(e.tool), e as never as Record<string, unknown>)
     await apply($, { kind: 'tool', mood: m })
     const r = await next(e)
-    await apply($, { kind: 'toolEnd', mood: m, isError: r.isError === true })
+    // An edit tool names its file ('' when it names none); other tools carry none.
+    const file = /^(Edit|Write|MultiEdit|NotebookEdit)$/.test(String(e.tool)) ? String((e as { file_path?: unknown; notebook_path?: unknown }).file_path ?? (e as { notebook_path?: unknown }).notebook_path ?? '') : undefined
+    await apply($, { kind: 'toolEnd', mood: m, isError: r.isError === true, file, command: e.tool === 'Bash' })
     return r
-  })
+  }).catch(through)
 
   // A permission dialog opened: the crab holds up a question mark until the call goes on. Not `tool.check`'s ask,
   // which the mode settles after it: auto mode's classifier approved most unseen, and the "?" showed for nobody (12 Oct).
   on('classic.PermissionRequest', async ($, e, next) => {
     if (typeof (e as { agent_id?: unknown }).agent_id !== 'string') await apply($, { kind: 'ask' })
     return next(e)
-  })
+  }).catch(through)
 
   // A precompute runs unseen in the background, and a subagent's compaction is its own: neither squishes the crab.
   // No 🦀 emoji: the real crab squishes right beside the line (Praj, 11 Oct). The bar line doubles as a trace: Praj saw no squish on 11 Oct's auto compaction; line but no squish = drawing,
@@ -120,7 +208,7 @@ export const register: Register = on => {
         await update($, lines, l => setLine(l, 'crab-buddy', undefined))
       }
     }
-  })
+  }).catch(through)
   on('classic.PreCompact', async ($, e, next) => {
     const r = await next(e)
     if (armed && !r.block && !r.preventContinuation) {
@@ -129,7 +217,7 @@ export const register: Register = on => {
       await update($, lines, l => setLine(l, 'crab-buddy', `Compacting (${armed})`))
     }
     return r
-  })
+  }).catch(through)
 
   // Cache warm stays in the footer, beside the model name, and not again in the bar (Praj, 11 Oct).
   // Status lines move into the crab's bar: all of them in one glance, no plugin names, no "+1" (Praj, 11 Oct).
@@ -140,14 +228,23 @@ export const register: Register = on => {
     await update($, lines, l => setLine(l, who, e.text))
     // Cleared below too: a resumed session re-pins the footer lines it had before the restart.
     return next({ ...e, text: undefined })
-  })
+  }).catch(through)
+
+  // Heard, never changed: the rows pass on exactly as they came. Drawing may not write state, so a change is written
+  // a moment later from a timer, its own event; the crab's row then redraws once with or without its paint.
+  on('ui.render', { component: 'AbovePromptList' }, async ($, e, next) => {
+    const others = e.props.rows.some(r => r.plugin !== 'crab-buddy')
+    if (others !== await read($, company)) $.clock.after(0, () => update($, company, () => others))
+    return next(e)
+  }).catch(through)
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const rest = await next(e)
     if (e.props.hasSurvey) return rest
-    const { mood: m, take: t, log: seen, from } = await read($, look)
+    const { mood: m, take: t, log: seen, from, n, season: s, year, trait: learned } = await read($, look)
     // The caption log, newest on top; before the first change, the mood's first line.
-    const log = seen.length ? seen : [LINES[m][0]]
+    const matching = seen.filter(line => lineFitsScene(line, m, s, t))
+    const log = matching.length ? matching : [LINES[m][0]]
     // Footer-owned lines never draw here, even one a 0.2.0 session left in the atom.
     const ls = Object.entries(await read($, lines)).filter(([who]) => !FOOTER.has(who))
     const { Box, Svg, Text, Client } = $.ui.resolve(e) as ReturnType<typeof $.ui.resolve> & { Svg: never; Client: never }
@@ -156,7 +253,9 @@ export const register: Register = on => {
         {ls.map(([who, text]) => <Text key={who} color="text">{text}</Text>)}
       </Box>
     )
-    const info = !!row || !isEmpty(rest)
+    // Company: a status line, another plugin's content beneath, or another plugin's row in the band (Praj, 19 Nov: the
+    // dark paint reached up over the progress-bar row above and cut it in half).
+    const info = !!row || !isEmpty(rest) || await read($, company)
     // Terminal: the welcome-screen crab in quadrant blocks, at the band's bottom right, three rows tall; the
     // terminal animates it (./term.tsx). Too narrow for it beside the lines, the lines keep the room.
     // By surface, not by table: the terminal's table answers Svg too, drawn as an empty fragment.
@@ -168,32 +267,27 @@ export const register: Register = on => {
             {row}
             {info && rest}
           </Box>
-          <Client key="crab-term" module="./term.tsx" props={{ mood: m }} width={COLS} height={ROWS} />
+          <Client key="crab-term" module="./term.tsx" props={{ mood: m, take: t, ...(s ? { season: s } : {}) }} width={COLS} height={ROWS} />
         </Box>
       )
     }
     // The crab is in flow at the bar's right, beside the lines: floated, the band clipped it or shrank it to
     // its slot (0.4.3). 52×41: one size up, art ratio 38:30 (Praj, 11 Oct).
-    // The bar reads like the transcript (Praj, 11 Oct). Nothing floats: a floated fill painted over
-    // the crab and the lines in the app (0.4.5-0.4.7; 0.4.7's lift boxes did not lift them, live check 22:07).
-    //  - crab-fill is the crab's and the lines' own parent, so they paint over its fill in document order.
-    //  - It reaches into the card's padding ((40px - 1lh)/2 x 8px; margin units .5lh and ch) with the same
-    //    padding back, so the content stays put. The band clips overshoot above and sideways without
-    //    scrolling; below, overshoot would scroll the band, so the bottom stops at the padding's edge:
-    //    1.16 x .5lh = (40px - 1lh)/2 at the measured lh 18.5 (half a line left a 1.5px grey line, 22:24).
-    //  - crab-band carries the same colour: the app zeroes vertical margins down a single-child chain from
-    //    the root, and stops at a Box with a background.
-    // ponytail: 1.16 is calibrated to lh 18.5: a larger text size leaves a grey line below (lower it), a smaller
-    // one lets the bar scroll a pixel or two.
-    // The transcript's colour by theme key, which the desktop resolves by the app's own theme: Claude Code's theme
-    // setting can say dark while the app is light (Windows, Praj 12 Oct). Probe 10:58: #151515 dark, #fcfcfb light.
+    // Paint by company (Praj, 16 Nov): alone in the band the crab merges with the chat, the transcript colour by theme
+    // key (the 11 Oct look, 0.11.1). Since 2.1.325 other plugins' rows sit on the app's gray band card, where that
+    // paint showed as a dark strip, so with company (`info`: a status line or another plugin's content) it is dropped.
+    // The fill reaches into the card's padding ((40px - 1lh)/2 x 8px; margin units .5lh and ch) with the same padding
+    // back, so the content stays put; the bottom stops at the padding's edge: 1.16 x .5lh = (40px - 1lh)/2 at lh 18.5.
+    // ponytail: 1.16 is calibrated to lh 18.5: larger text leaves a grey line below (lower it), smaller lets the bar scroll.
+    // The narrow label still floats over the caption, so it keeps a theme-key background either way.
     const bg = 'userMessageBackground'
+    const paint = info ? undefined : bg
+    const reach = info ? {} : { marginTop: -2, paddingTop: 2, marginBottom: -1.16, paddingBottom: 1.16, marginLeft: -2, paddingLeft: 2, marginRight: -2, paddingRight: 2 }
     const stage = e.props.bodyColumns >= 60
     return (
-      <Box key="crab-band" flexDirection="row" backgroundColor={bg}>
+      <Box key="crab-band" flexDirection="row" backgroundColor={paint}>
         {/* The crab stands at the bottom right, right on the prompt box, however many lines sit beside it (Praj, 12 Oct). */}
-        <Box key="crab-fill" flexDirection="row" alignItems="flex-end" columnGap={2} flexGrow={1} backgroundColor={bg}
-          marginTop={-2} paddingTop={2} marginBottom={-1.16} paddingBottom={1.16} marginLeft={-2} paddingLeft={2} marginRight={-2} paddingRight={2}>
+        <Box key="crab-fill" flexDirection="row" alignItems="flex-end" columnGap={2} flexGrow={1} backgroundColor={paint} {...reach}>
           <Box key="crab-text" flexDirection="column" flexGrow={1} flexShrink={1}>
             {row}
             {info && rest}
@@ -209,8 +303,8 @@ export const register: Register = on => {
                 the art sees the pointer. On Windows a hover Box got the desktop's own pill, which kept only the text
                 colour (Praj's photos, 12 Oct). */}
             {stage
-              ? <Svg source={stageArt(m, t, from ?? STATION[m], MEANING[m])} alt={`Claude crab: ${m}`} width={2000} height={41} isInteractive />
-              : <Svg source={crabArt(m, t)} alt={`Claude crab: ${m}`} width={52} height={41} />}
+              ? <Svg source={stageArt(m, t, from ?? STATION[m], MEANING[m], n, s, year, learned)} alt={`Claude crab: ${m}`} width={2000} height={41} isInteractive />
+              : <Svg source={crabArt(m, t, s, year, learned)} alt={`Claude crab: ${m}`} width={52} height={41} />}
             {/* Narrow band, crab in the corner: the label floats left of it in the band's own colours, top row. */}
             {!stage && <Box position="absolute" top={0} right={8} display="none" hover={{ display: 'flex' }}
               backgroundColor={bg} paddingX={1}>

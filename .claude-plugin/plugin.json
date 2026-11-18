@@ -1,7 +1,7 @@
 {
   "name": "crab-buddy",
-  "version": "0.11.1",
-  "description": "An animated pixel-art Claude crab above your prompt that acts out what Claude Code is doing: thinking, reading, building (ten scenes), testing, debugging, web, subagents, git, installs, long turns, compacting, idle, dozing and night owl. 25 moods, 110 takes, each a 14 s scene with beats and emotes; it walks a stage in the desktop app and draws in block characters in the terminal. A caption of one-liners scrolls beside it; each look holds 8 s, so nothing flashes. Light and dark themes, reduce-motion aware. 0 tokens.",
+  "version": "0.12.0",
+  "description": "An animated pixel-art Claude crab above your prompt that acts out what Claude Code is doing: thinking, reading, building (ten scenes), testing, debugging, browsing, connected tools, planning, skills, git syncs, shipping, subagents, installs, long turns, compacting, idle, dozing and night owl. 31 moods, 122 base takes plus seven scenes per Friday, weekend and Sunday-night calendar look, each a 14 s scene with beats and emotes. It counts what really happened (edits, files, subagents, test results), dresses for Friday, the weekend, Sunday night, Christmas and New Year, and reacts when you point at it or press it. It walks a stage in the desktop app and draws in block characters in the terminal. Light and dark themes, reduce-motion aware. 0 tokens.",
   "author": {
     "name": "Praj",
     "url": "https://github.com/pvjbuilds"
@@ -21,6 +21,9 @@
     "desktop-pet",
     "virtual-pet",
     "status-line",
-    "fun"
+    "fun",
+    "status-line-pet",
+    "terminal-pet",
+    "animated-mascot"
   ]
 }
