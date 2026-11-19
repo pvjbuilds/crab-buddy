@@ -122,12 +122,13 @@ const HOLD = 5_000
 const DONE = 5_000
 const LONG = 5 * 60_000
 const DOZE = 10 * 60_000
-const SWAP = 8_000
 // Building is most of a turn, so it rotates five scenes, 14 s each, counted from the turn's start (Praj, 12 Oct; 10 s
 // switched too often, 40% longer).
 // The 5 s retime tick moves it on; each switch redraws the crab once.
 export const BUILDS = ['build', 'saw', 'type', 'paint', 'gear'] as const satisfies readonly Mood[]
 const SCENE = 14_000
+// The long-turn sweat and the work swap one full scene each (Praj, 20 Nov 2026: 8 s cut scenes midway).
+const SWAP = SCENE
 // The night owl keeps the person's own clock: the host's local hour.
 const localHour = (now: number) => new Date(now).getHours()
 // Moods that only last while their tool runs; after it Claude is thinking again.
@@ -198,7 +199,7 @@ export function shown(c: Crab, now: number): Mood {
   if (c.until > now || c.mood === 'comp') return c.mood
   if (c.turnAt !== null) {
     const busy = c.until ? 'think' : c.mood
-    // Past 5 minutes the sweat takes turns with the work, 8 s each, so a long turn keeps its flavour (Praj, 11 Oct).
+    // Past 5 minutes the sweat takes turns with the work, a 14 s scene each, so a long turn keeps its flavour (Praj, 11 Oct).
     const over = now - c.turnAt - LONG
     if (over > 0 && Math.floor(over / SWAP) % 2 === 0 && (busy === 'think' || busy === 'read' || busy === 'build')) return 'long'
     return busy === 'build' ? BUILDS[Math.floor((now - c.turnAt) / SCENE) % BUILDS.length] : busy

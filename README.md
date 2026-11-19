@@ -278,6 +278,7 @@ this folder; edits reload at the end of each turn.
 
 See [Releases](https://github.com/pvjbuilds/crab-buddy/releases). Recent:
 
+- **0.12.1**: calmer pacing. Every look plays its full 14-second scene before the next one (it was 8 s, which cut scenes midway); long turns swap sweat and work one scene at a time; Friday, the weekend or a new trait no longer restart the crab mid-scene or send it back across the stage.
 - **0.12.0**: six new moods (browser, connected tools, planning, skills, git sync, shipping); honest numbers (done caption, bricks per file, minis per subagent); seven scenes each for Friday, the weekend and Sunday night; Christmas and New Year hats; a crab you can pet (squash, spring, hearts); session traits and a per-project welcome back; second terminal takes for four moods; the band paints only when the crab is alone (it now sees other plugins' rows too, so it no longer cuts the row above it in half); every gating hook fails open. 31 moods, 122 takes.
 - **0.10.0**: scenes, not loops; 110 takes; ten build scenes; compacting only when real.
 - **0.9.5**: both caption lines always show, newest in full text colour.

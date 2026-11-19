@@ -15,7 +15,9 @@ const look = atom({ plugin: 'crab-buddy', key: 'look' } as const, { mood: 'idle'
 // jumps to whatever is current. The same mood keeps its take until the take's own clock moves it on.
 // 8 s, not 3 (Praj, 12 Oct 13:05: still swapped every 2-4 s). A held look (an error, a test result, done), a
 // question or a squish cuts straight in: a 5 s hold would vanish inside the dwell, and the trip lands on its moment.
-const DWELL = 8_000
+// 14 s, one full scene (Praj, 20 Nov 2026: "cut off midway", "cycled quicker than I would like"): every take is a
+// 14 s scene, so 8 s cut each one before its last beat.
+const DWELL = 14_000
 const CUT: ReadonlySet<Mood> = new Set(['debug', 'dizzy', 'testf', 'testp', 'fixed', 'done', 'ask', 'comp'])
 // Where the crab stands now, mid-walk or mid-wander: a new look walks on from here, never from the old spot,
 // which snapped the crab back across the stage (Praj, 12 Oct). The first look is timed from the session's start.
@@ -35,14 +37,17 @@ async function show($: any, c: Crab, now: number) {
   const s = season(now, await $.env.get('CRAB_SEASON').catch(() => undefined))
   const date = new Date(now), year = date.getFullYear() + (date.getMonth() === 11 && date.getDate() === 31 ? 1 : 0)
   const learned = trait(c.profile ?? PROFILE)
-  if (learned !== was.trait) await update($, look, x => ({ ...x, trait: learned }))
+  // A new trait waits for the next look or take: redrawing for it alone restarted the scene mid-beat.
   if (s !== was.season || (s === 'newYear' && year !== was.year)) {
     await update($, look, x => {
       const t = take({ ...c, lastActive: x.seed ?? c.lastActive }, now, x.mood, s)
       const line = pickLine(x.mood, now, s, t)
       const log = takes(x.mood, s) > takes(x.mood)
         ? [line, ...x.log.filter(l => l !== line && lineFitsScene(l, x.mood, s, t))].slice(0, 2) : x.log
-      return { ...x, season: s, year, take: t, log }
+      // Walks on from where the crab stands: a redraw restarts the art, which otherwise jumped back to `from`. Not
+      // when the art has not played yet (dressed at the session's start), where it would only delay the first look.
+      const playing = (x.at || began) < now
+      return { ...x, season: s, year, take: t, log, trait: learned, ...(playing ? { at: now, from: here(x, now) } : {}) }
     })
   }
   // The stage's real counts (running subagents, files edited) ride in the look; the art redraws only when a count
@@ -61,7 +66,7 @@ async function show($: any, c: Crab, now: number) {
       const line = pickLine(m, now, s, t)
       const log = takes(m, s) > takes(m)
         ? [line, ...x.log.filter(l => l !== line && lineFitsScene(l, m, s, t))].slice(0, 2) : x.log
-      return { ...x, take: t, seed: x.seed ?? c.lastActive, at: now, from: here(x, now), n, log }
+      return { ...x, take: t, seed: x.seed ?? c.lastActive, at: now, from: here(x, now), n, log, trait: learned }
     })
     return
   }

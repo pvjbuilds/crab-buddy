@@ -18,8 +18,8 @@ test('the crab perches above the prompt and follows the turn: reading, a failed 
   expect(await crab()).toBe('Claude crab: idle')
   await $.turn.start({ text: 'go', turnId: 't1' } as never)
   await $.tool.call({ tool: 'Read', file_path: '/x' } as never)
-  // Each look holds 8 s before the next shows (Praj, 12 Oct: no flashing).
-  await clock.advance(8_000)
+  // Each look holds a 14 s scene (8 s until 20 Nov 2026) before the next shows (Praj, 12 Oct: no flashing).
+  await clock.advance(14_000)
   expect(await crab()).toBe('Claude crab: read')
   fail = true
   await $.tool.call({ tool: 'Bash', command: 'false' } as never)
@@ -28,7 +28,7 @@ test('the crab perches above the prompt and follows the turn: reading, a failed 
   await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false } as never)
   await clock.advance(3_000)
   expect(await crab()).toBe('Claude crab: done')
-  await clock.advance(10_000)
+  await clock.advance(14_000)
   expect(await crab()).toBe('Claude crab: idle')
   expect(await crab('terminal')).toBeUndefined()
 })
@@ -95,7 +95,7 @@ test('hovering the crab shows what its current animation means (Praj, 12 Oct)', 
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
   await $.turn.start({ text: 'go', turnId: 't1' } as never)
   await $.tool.call({ tool: 'Read', file_path: '/x' } as never)
-  await clock.advance(8_000)
+  await clock.advance(14_000)
   // On the stage the label is in the crab's own art.
   const wide = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props: { ...(props as object), bodyColumns: 108 } as never })
   expect(String((await wide.find({ type: 'Svg' }))?.props?.source)).toContain('Reading and searching files')
@@ -196,7 +196,9 @@ test('theme: every colour the band paints is a theme key; the stage label lives 
 // Praj, 12 Oct: rapid changes flashed by too fast to read. Each look stays at least 3 s (8 s since 13:05), then the crab jumps
 // to whatever is current; the caption scrolls like a terminal, newest on top, the one before it dimmer below.
 // Praj, 14 Oct: both lines show beside other lines too (a status line above them hid the older one), newest in white.
-test('no flashing: a look holds 8 s, repeats keep their take, and the caption scrolls down a line at a time', async ($, on) => {
+// 20 Nov 2026: neither side was wrong; Praj asked that every scene play through ("cut off midway"), so a routine
+// look holds one full 14 s scene, not 8 s. The times below moved with it; at 28.5 s building is on its third scene.
+test('no flashing: a look holds a full 14 s scene, repeats keep their take, and the caption scrolls down a line at a time', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   on('session.start', () => ({ cwd: '/p' }) as never)
   on('tool.call', () => ({ result: {} }) as never)
@@ -206,8 +208,9 @@ test('no flashing: a look holds 8 s, repeats keep their take, and the caption sc
   const band = async () => { const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props }); return { svg: (await m.find({ type: 'Svg' }))?.props, text: kids(await m.find({ key: 'crab-text' }) as never as El) } }
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
   await $.turn.start({ text: 'go', turnId: 't1' } as never)
-  await clock.advance(8_000)
+  await clock.advance(13_000)
   await $.tool.call({ tool: 'Read', file_path: '/a' } as never)
+  await clock.advance(1_000)
   const a = await band()
   expect(a.svg?.alt).toBe('Claude crab: read')
   await clock.advance(500)
@@ -216,10 +219,12 @@ test('no flashing: a look holds 8 s, repeats keep their take, and the caption sc
   const b = await band()
   // Half a second in: still the same read, same take.
   expect([b.svg?.alt, b.svg?.source === a.svg?.source]).toEqual(['Claude crab: read', true])
-  await clock.advance(8_000)
+  await clock.advance(13_000)
+  expect((await band()).svg?.alt).toBe('Claude crab: read')
+  await clock.advance(1_000)
   const c = await band()
-  // 16.5 s into the turn: building has moved on to its second scene, the saw.
-  expect(c.svg?.alt).toBe('Claude crab: saw')
+  // 28.5 s into the turn: building has moved on to its third scene, the laptop.
+  expect(c.svg?.alt).toBe('Claude crab: type')
   // A one-liner from each job, newest on top; the plain meaning stays on the hover label.
   const [top, below] = c.text.slice(-2).map(t => [t.props?.color, (t.children as string[])[0]])
   expect([top[0], LINES.build.includes(top[1] as string), below[0], LINES.read.includes(below[1] as string)]).toEqual(['text', true, 'subtle', true])
@@ -227,7 +232,8 @@ test('no flashing: a look holds 8 s, repeats keep their take, and the caption sc
 
 // Praj, 12 Oct 13:05: looks still swapped every 2-4 s. A routine look holds 8 s; a test result, a question, the
 // turn's end or a squish cuts straight in, so the trip and the confetti land on their moment.
-test('a routine look holds 8 s, but a test result cuts straight in', async ($, on) => {
+// 20 Nov 2026: 8 s became one full 14 s scene (Praj: animations "cut off midway"); neither side was wrong.
+test('a routine look holds a full 14 s scene, but a test result cuts straight in', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   let fail = false
   on('session.start', () => ({ cwd: '/p' }) as never)
@@ -239,7 +245,7 @@ test('a routine look holds 8 s, but a test result cuts straight in', async ($, o
   await $.session.start({ source: 'startup', cwd: '/p' } as never)
   await $.turn.start({ text: 'go', turnId: 't1' } as never)
   await $.tool.call({ tool: 'Read', file_path: '/a' } as never)
-  await clock.advance(7_000)
+  await clock.advance(13_000)
   expect(await alt()).toBe('Claude crab: think')
   await clock.advance(1_000)
   expect(await alt()).toBe('Claude crab: read')
@@ -299,6 +305,20 @@ test('stage: a new look walks on from where the crab has wandered to, never from
   expect(await src()).toContain('@keyframes st-go{0%{transform:translateX(calc((100% - 52px) * 0.6))}100%{transform:translateX(calc((100% - 52px) * 0.85))}}')
 })
 
+// 20 Nov 2026 (Praj: the crab "disappears for half a second, reappears on the rightmost side"): a calendar look
+// that came on mid-wander redrew the crab from where its look began, so it jumped back across the stage.
+test('stage: Friday coming on mid-wander walks on from where the crab stands, never from its old spot', async ($, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 10, 20, 15, 59, 30).getTime() })
+  on('session.start', () => ({ cwd: '/p' }) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 108 } as never
+  const src = async () => String((await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).find({ type: 'Svg' }))?.props?.source)
+  await $.session.start({ source: 'startup', cwd: '/p' } as never)
+  // 30 s into idle's 80 s wander it rests at 1 - .4; Friday starts at 16:00 on the 1 s tick.
+  await clock.advance(30_000)
+  expect(await src()).toContain('@keyframes st-go{0%{transform:translateX(calc((100% - 52px) * 0.6))}100%{transform:translateX(calc((100% - 52px) * 1))}}')
+})
+
 test('stage: a new look scuttles in from where the last one stood; a new take of the same look stays put', async ($, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 11, 14, 0).getTime() })
   on('session.start', () => ({ cwd: '/p' }) as never)
@@ -317,7 +337,9 @@ test('stage: a new look scuttles in from where the last one stood; a new take of
   // Thinking walks in (.8 s), then sways left; 12.5 s in it rests at its 45% to 55% stop of 24 s (.85 - .3).
   await clock.advance(9_500)
   await $.tool.call({ tool: 'Read', file_path: '/a' } as never)
-  await clock.advance(1_000)
+  // Reading shows once thinking has played its full 14 s scene (20 Nov 2026; it was 8 s), 14 s into the turn, the
+  // same 55% stop.
+  await clock.advance(1_500)
   expect(await src()).toContain('0%{transform:translateX(calc((100% - 52px) * 0.55))}100%{transform:translateX(calc((100% - 52px) * 0.65))}')
 })
 
@@ -435,12 +457,15 @@ test('honest numbers in the band: bricks equal files edited, and the turn ends w
   await $.tool.call({ tool: 'Edit', file_path: '/a.ts' } as never)
   await $.tool.call({ tool: 'Write', file_path: '/b.ts' } as never)
   await $.tool.call({ tool: 'Edit', file_path: '/a.ts' } as never)
-  await clock.advance(9_000)
+  // The wall is build's first take of its first scene: 140 s in, once the five scenes have each played both takes.
+  // 20 Nov 2026: 9 s became 141 s, since a look now holds a full 14 s scene and the first build scene went by under
+  // thinking; neither side was wrong.
+  await clock.advance(141_000)
   // 2 files, 3 edits: two bricks on the wall.
   expect((await band()).match(/class=\\"st-bk\\"/g)?.length).toBe(2)
   await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false } as never)
   await clock.advance(1_000)
-  expect(await band()).toContain('Done: 3 edits in 2 files, 9 s.')
+  expect(await band()).toContain('Done: 3 edits in 2 files, 2 min.')
 })
 
 test('honest numbers in the band: a second running subagent adds a mini crab without waiting for a new look', async ($, on) => {
@@ -456,7 +481,9 @@ test('honest numbers in the band: a second running subagent adds a mini crab wit
   const minis = async () => JSON.stringify(await (await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })).drawn()).match(/class=\\"st-mc\\"/g)?.length
   await $.turn.start({ text: 'go', turnId: 't1' } as never)
   const a = $.tool.call({ tool: 'Agent' } as never)
-  await clock.advance(9_000)
+  // The mini crabs ride sub's first take, back up 56 s in (four 14 s takes). 20 Nov 2026: was 9 s, before a look held
+  // a full 14 s scene, which moved the first take shown; neither side was wrong.
+  await clock.advance(57_000)
   expect(await minis()).toBe(1)
   const b = $.tool.call({ tool: 'Agent' } as never)
   await clock.advance(1_000)
@@ -598,6 +625,20 @@ test('session trait flows to idle and done art and a quarter of captions, with t
   const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, bodyColumns: 80 } as never })
   const terminal = kids(await m.find({ key: 'crab-band' }) as El).at(-1)
   expect((terminal?.props?.props as any).trait).toBeUndefined()
+})
+
+// 20 Nov 2026 (Praj: animations "cut off midway"): a trait earned mid-look waits for the look's next take; a redraw
+// for it alone restarted the scene.
+test('a trait earned mid-look waits for the next take, then shows', async ($, on) => {
+  const clock = mock.clock(on, { now: memoryTime }); mock.env(on, { CRAB_MEMORY: 'off' }); memoryCore(on)
+  await $.session.start({ cwd: '/memory-project' } as never)
+  await clock.advance(1_000)
+  const before = await memoryBand($)
+  for (let i = 0; i < 15; i++) await $.tool.call({ tool: 'Edit', file_path: '/a' } as never)
+  await clock.advance(1_000)
+  expect(await memoryBand($)).toBe(before)
+  await clock.advance(42_000)
+  expect(await memoryBand($)).toContain('cb-trait-builder')
 })
 
 test('a returning project greeting is first even when the session opens at night', async ($, on) => {

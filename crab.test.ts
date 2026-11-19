@@ -73,10 +73,13 @@ test('a turn past 5 minutes shows the long-turn sweat, but a failure still wins'
   const c = run([0, { kind: 'turnStart' }], [S, { kind: 'tool', mood: 'build' }])
   // 14 s scenes from the turn's start: 250 s in is scene 17, the laptop (17 % 5 = 2); 309 s in is scene 22, too.
   expect(shown(c, T0 + 4 * M + 10 * S)).toBe('type')
-  // Past 5 minutes it takes turns: 8 s of sweat, 8 s of the work itself, so a long session keeps its flavour.
+  // Past 5 minutes it takes turns: one 14 s scene of sweat, one of the work itself, so a long session keeps its flavour.
+  // 20 Nov 2026: neither side was wrong; Praj asked for each scene to play through ("cycled quicker than I would
+  // like"), so the swap went from 8 s to a full scene.
   expect(shown(c, T0 + 5 * M + S)).toBe('long')
-  expect(shown(c, T0 + 5 * M + 9 * S)).toBe('type')
-  expect(shown(c, T0 + 5 * M + 17 * S)).toBe('long')
+  expect(shown(c, T0 + 5 * M + 9 * S)).toBe('long')
+  expect(shown(c, T0 + 5 * M + 15 * S)).toBe('type')
+  expect(shown(c, T0 + 5 * M + 29 * S)).toBe('long')
   const f = step(c, { kind: 'toolEnd', mood: 'build', isError: true }, T0 + 6 * M)
   expect(shown(f, T0 + 6 * M + S)).toBe('debug')
 })
