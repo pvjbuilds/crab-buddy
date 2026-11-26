@@ -245,6 +245,26 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // A scene that is gone is asked for no more, so its end is heard as the theme is set or cleared, where those
+  // reach this plugin: without it the paint stayed dropped, a grey card, until the session ended.
+  on('theme.set', async ($, e, next) => {
+    const set = await next(e)
+    const now = e.backdrop !== undefined && e.backdrop.glass !== false
+    if (now !== frosted) {
+      frosted = now
+      $.ui.invalidate('ui.render')
+    }
+    return set
+  })
+  on('theme.clear', async ($, e, next) => {
+    const cleared = await next(e)
+    if (frosted) {
+      frosted = false
+      $.ui.invalidate('ui.render')
+    }
+    return cleared
+  })
+
   on('ui.render', { component: 'AbovePromptList' }, async ($, e, next) => {
     const others = e.props.rows.some(r => r.plugin !== 'crab-buddy')
     if (others !== await read($, company)) $.clock.after(0, () => update($, company, () => others))
