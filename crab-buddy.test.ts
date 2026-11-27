@@ -384,6 +384,26 @@ test('company decides the paint: alone the band is the transcript colour, beside
     .toEqual(['crab-fill', 'userMessageBackground', -2, 2, -1.16, 1.16, -2, 2, -2, 2])
 })
 
+// A look with a backdrop (a BackdropKit theme) frosts the app's panels, the band's card included: the transcript-colour
+// paint then stands on the glass as a solid block while the rows beside it show the scene through.
+test('a frosted backdrop decides the paint too: over the glass the crab alone is unpainted, with glass off it is painted', async ($, on) => {
+  const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e as never) as never as { Box: never }; return h(Box, {}) as never })
+  const paint = async () => {
+    const m = await $.ui.mount({ plugin: 'crab-buddy', surface: 'desktop', component: 'AbovePrompt', props })
+    const band = await m.find({ key: 'crab-band' }) as never as El
+    return [band.props?.backgroundColor, kids(band)[0]?.props?.backgroundColor]
+  }
+  // The app asks every plugin to draw a look's scene, which is how the crab hears of one: it answers nothing itself.
+  const scene = (glass: { blur: number; opacity: number } | false) =>
+    $.ui.mount({ plugin: 'low-orbit', surface: 'desktop', component: 'Backdrop', props: { scene: 'orbit', plugin: 'low-orbit', glass } as never })
+  expect(await paint()).toEqual(['userMessageBackground', 'userMessageBackground'])
+  await scene({ blur: 16, opacity: 0.6 })
+  expect(await paint()).toEqual([undefined, undefined])
+  await scene(false)
+  expect(await paint()).toEqual(['userMessageBackground', 'userMessageBackground'])
+})
+
 test('company decides the paint: another plugin\'s card beside the crab means no paint at all', async ($, on) => {
   const props = { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80 } as never
   on('ui.render', ($$, e) => { const { Box, Text } = $$.ui.resolve(e as never) as never as { Box: never; Text: never }; return h(Box, {}, h(Text, {}, 'other mod')) as never })
