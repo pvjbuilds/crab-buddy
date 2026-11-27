@@ -650,7 +650,11 @@ export function where(mood: Mood, from: number, s: number, t = 0): number {
 
 // A letter's width in ems, for sizing the label's pill without measuring (measured in Chromium at 11.5 px, 12:35:
 // 4.9 to 6.9 px a letter by text). ponytail: Helvetica-ish classes; the pill's spacing absorbs the rest.
-const em = (c: string) => /[ijl.,:;'|!I]/.test(c) ? .23 : /[ftr ]/.test(c) ? .3 : /[mwMW]/.test(c) ? .83 : /[A-Z]/.test(c) ? .68 : .54
+// Glyph advances in em, measured in Chromium at 11.5 px sans-serif (Helvetica on macOS, Arial on Windows: the same
+// metrics), 27 Nov. The old guess by letter class was up to 3.5 px off per line; this table is within 1.3 px
+// (kerning), and textLength takes up that last bit, so a caption's padding is the same on both sides.
+const ADV: Record<string, number> = Object.fromEntries([..." 278!278'191,278-333.278:278?556A667B667C722D722E667F611G778H722I278J500L556M833N722O778P667Q778R722S667T611U722V667W944Y667Z611a556b556c500d556e556f278g556h556i222j222k500l222m833n556o556p556q556r333s500t278u556v500w722x500y500z500…1000".matchAll(/(\D)(\d+)/g)].map(([, c, n]) => [c, +n / 1000]))
+const em = (c: string) => /\d/.test(c) ? 0.556 : ADV[c] ?? .556
 
 // Web on the stage (21 Oct: one thin strip under every take read as a dashed line, not water). In stage px, the
 // crab's box 52×41 at the origin; the pieces that ride with the crab are drawn in its box.
@@ -832,12 +836,17 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = '', n?: 
     // The crab faces right, so it pitches forward over its front foot at (40, 38).
     + (mood === 'testf' ? `.st-tr{transform-box:view-box;transform-origin:0 0;animation:st-trip 2.4s ease-in-out ${+d.toFixed(2)}s 1 both}`
       + '@keyframes st-trip{0%,40%{transform:none}52%,80%{transform:translate(40px,38px) rotate(24deg) translate(-40px,-38px)}100%{transform:none}}' : '')
-    // Pointer on the crab: the label shows over its head and rides with it; the crab keeps walking. The label
+    // Pointer on the crab: the label shows beside it and rides with it; the crab keeps walking. The label
     // stays 3 s after the pointer leaves, then fades out in .2 s (Praj, 12 Oct: a pause stopped the crab, a quick
     // pass lost it).
     + '.st-tip{opacity:0;visibility:hidden;transition:opacity .2s 3s,visibility 0s 3.2s}.st-at:hover .st-tip{opacity:1;visibility:visible;transition:none}'
-    // Dark ink on a light pill, light ink on a dark pill: crab orange read poorly (Praj, 12 Oct).
-    + '.st-bg{fill:#f0eee6}.st-ink{fill:#1f1e1d}@media (prefers-color-scheme:dark){.st-bg{fill:#3a3936}.st-ink{fill:#f0eee6}}'
+    // Each bubble pops out of the crab's mouth; it shrinks back only once hidden.
+    + '.st-tip .st-pop{transform:scale(.3);transition:transform 0s 3.2s}.st-at:hover .st-tip .st-pop{transform:none;transition:transform .2s cubic-bezier(.3,1.5,.5,1)}'
+    // The label steps aside at once on a press and comes back once the pet line has faded (2.2 s + .15 s).
+    + '.st-tq{transition:opacity .15s 2.35s}.st-zc:active~.st-tip .st-tq{opacity:0;transition:none}'
+    + '.st-pet .st-pop{transform:scale(.3);transition:transform 0s 2.4s}.st-zc:active~.st-pet .st-pop{transform:none;transition:transform .2s cubic-bezier(.3,1.5,.5,1)}'
+    // Dark ink on a light bubble, light ink on a dark one, with a grey border: crab orange read poorly (Praj, 12 Oct).
+    + '.st-bg{fill:#f0eee6}.st-ink{fill:#1f1e1d}.st-bd{fill:#8a8984}@media (prefers-color-scheme:dark){.st-bg{fill:#3a3936}.st-ink{fill:#f0eee6}.st-bd{fill:#6b6a65}}'
   // Stage-wide extras, drawn behind the crab (Praj, 12 Oct).
   let fx = '', fxCss = ''
   if (mood === 'fixed') {
@@ -878,13 +887,29 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = '', n?: 
     rides = g('st-fx', bricks.map(([bx, by], j) => `<rect x="${bx}" y="${by}" width="8" height="4" fill="${j % 2 ? BR2 : BR}" class="st-bk" style="animation-delay:${(d + .3 + j * .45).toFixed(2)}s"/>`).join(''))
     fxCss += '.st-bk{animation:st-bk .25s ease-out both}@keyframes st-bk{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:none}}'
   }
-  // The label, in the art's clear top 13.67 px; it ends at the crab's right edge on the right half of the stage
-  // and starts at its left edge on the left half, so it never runs off. 13.5 tall: 12 read squashed (Praj, 12 Oct).
-  // Only the spacing flexes to fit: stretched glyphs read squat and low-res (recording 12:30).
-  const tw = +[...tip].reduce((t, c) => t + em(c) * 11.5, 0).toFixed(1), w = Math.round(tw + 8), side = (f: number) => f >= .5 ? W - w : 0, lx = side(to)
-  // The crab crosses the middle while it walks in or wanders, so the label switches sides with it on the same clocks
-  // (recording 12:24: "A command faile" ran off the right edge). Offsets from the resting side, held between steps.
-  const swap = (name: string, at: (u: number) => number, clock: string, width = w, pos = (right: boolean) => right ? W - width : 0) => {
+  // The captions (Praj, 27 Nov): the hover label and the pet line stand beside the crab as a pixel speech bubble at
+  // eye level, its tail at the crab's mouth, never over its head (the pill above the head was hit by the pet's jump:
+  // "the text sort of clips the crab top part"). Crab on the right half: bubble on its left (`st-sl`); left half: on
+  // its right (`st-sr`). Both sides are drawn; the one not in use is parked off the stage by translate, so the walk
+  // and wander clocks switch sides with the crab, the offsets adding up (recording 12:24: "A command faile" ran off).
+  const BY = 12, BH = 17, TIPL = 4, TIPR = 49, PARK = -9999, PAD = 6
+  const rc = (x: number, y: number, w: number, h: number, c: string) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${c}"/>`
+  const shape = (bx: number, bwid: number, right: boolean, text: string) => {
+    const b = 'st-bd', f = 'st-bg', y = BY
+    // A one-pixel border with notched corners, the crab's own pixel look.
+    let o = rc(bx + 1, y + 1, bwid - 2, BH - 2, f)
+      + rc(bx + 2, y, bwid - 4, 1, b) + rc(bx + 2, y + BH - 1, bwid - 4, 1, b) + rc(bx, y + 2, 1, BH - 4, b) + rc(bx + bwid - 1, y + 2, 1, BH - 4, b)
+      + rc(bx + 1, y + 1, 1, 1, b) + rc(bx + bwid - 2, y + 1, 1, 1, b) + rc(bx + 1, y + BH - 2, 1, 1, b) + rc(bx + bwid - 2, y + BH - 2, 1, 1, b)
+    // The tail: four stepped columns from the bubble's side toward the crab, its tip at eye level.
+    const c = (k: number) => right ? bx + bwid + k : bx - 1 - k
+    o += rc(right ? bx + bwid - 1 : bx, y + 7, 1, 4, f)
+    for (const [k, top, fill] of [[0, 6, 4], [1, 7, 3], [2, 8, 2], [3, 9, 1]] as const) o += rc(c(k), y + top, 1, 1, b) + (fill > 1 ? rc(c(k), y + top + 1, 1, fill - 1, f) : '') + rc(c(k), y + 11, 1, 1, b)
+    // Even padding: the text is fitted to exactly the inside. Only the spacing flexes: stretched glyphs read squat and low-res (recording 12:30).
+    return o + `<text x="${bx + PAD}" y="${y + 12}" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${bwid - 2 * PAD}" lengthAdjust="spacing">`
+      + `${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`
+  }
+  // A side's offset from its resting place through a clock, held between steps.
+  const swap = (name: string, at: (u: number) => number, clock: string, pos: (right: boolean) => number) => {
     const k: string[] = []
     let was = NaN
     for (let i = 0; i <= 100; i++) {
@@ -893,32 +918,33 @@ export function stageArt(mood: Mood, t = 0, from = STATION[mood], tip = '', n?: 
     }
     return k.some(f => !f.includes('(0px)')) ? { css: `.${name}{animation:${name} ${clock}}@keyframes ${name}{${k.join('')}}`, name } : undefined
   }
-  const lw = tip && go ? swap('st-lw', u => where(mood, from, d * u, t), `${+d.toFixed(2)}s step-end`) : undefined
-  const lr = tip && roam ? swap('st-lr', u => where(mood, from, d + roam[0] * u, t), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`) : undefined
-  const wrap = (g: string) => [lr, lw].reduce((a, l) => l ? `<g class="${l.name}">${a}</g>` : a, g)
-  const label = tip ? wrap(`<g class="st-tip"><rect x="${lx}" y="0" width="${w}" height="13.5" rx="3" class="st-bg"/>`
-    + `<text x="${lx + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink" textLength="${tw}" lengthAdjust="spacing">`
-    + `${tip.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text></g>`) : ''
-  // One caption at a time (Praj, 17 Nov): the pet line stands in the label's lane, drawn after it and at least as
-  // wide, so it covers the label while it shows and fades.
-  const pw = Math.max(w, Math.ceil([...pet].reduce((sum, c) => sum + em(c) * 11.5, 0)) + 8)
-  const px = to >= .5 ? W - pw : 0
-  const pwalk = go ? swap('st-pw', u => where(mood, from, d * u, t), `${+d.toFixed(2)}s step-end`, pw) : undefined
-  const proam = roam ? swap('st-pr', u => where(mood, from, d + roam[0] * u, t), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`, pw) : undefined
-  const bubble = `<g class="st-pet">${[proam, pwalk].reduce((body, l) => l ? g(l.name, body) : body,
-    `<rect x="${px}" y="0" width="${pw}" height="13.5" rx="3" class="st-bg"/>`
-    + `<text x="${px + 4}" y="10.6" font-family="sans-serif" font-size="11.5" text-rendering="geometricPrecision" class="st-ink">${pet}</text>`)}</g>`
+  const sideCss: string[] = [], sideNames: string[] = []
+  const sides = (id: string, text: string) => ([['l', true, TIPL], ['r', false, TIPR]] as const).map(([v, right, tip]) => {
+    const bwid = Math.round(fit(text) + 2 * PAD), bx = right ? TIPL - 3 - bwid : TIPR + 4
+    const pos = (r: boolean) => r === right ? 0 : PARK, base = pos(to >= .5)
+    const walk = go ? swap(`${id}-w${v}`, u => where(mood, from, d * u, t), `${+d.toFixed(2)}s step-end`, pos) : undefined
+    const wander = roam ? swap(`${id}-r${v}`, u => where(mood, from, d + roam[0] * u, t), `${roam[0]}s step-end ${+d.toFixed(2)}s ${once ? '1 forwards' : 'infinite'}`, pos) : undefined
+    if (base && !walk && !wander) return ''
+    for (const a of [walk, wander]) if (a) sideCss.push(a.css), sideNames.push('.' + a.name)
+    const body = [wander, walk].reduce((s, a) => a ? g(a.name, s) : s, `<g class="st-pop" style="transform-origin:${tip}px ${BY + 10}px">${shape(bx, bwid, right, text)}</g>`)
+    return `<g class="st-s${v}"${base ? ` style="transform:translateX(${base}px)"` : ''}>${body}</g>`
+  }).join('')
+  const fit = (s: string) => +[...s].reduce((t, c) => t + em(c) * 11.5, 0).toFixed(1)
+  // One caption at a time (Praj, 17 Nov): the label steps aside while the pet line shows (`st-tq`), so each bubble
+  // is sized to its own text; covering the label left a wide gap after a short pet line (Praj, 27 Nov).
+  const label = tip ? `<g class="st-tip"><g class="st-tq">${sides('st-lb', tip)}</g></g>` : ''
+  const bubble = `<g class="st-pet">${sides('st-pb', pet)}</g>`
   const zones = '<rect class="st-zl" x="-24" y="14" width="32" height="27"/>'
     + '<rect class="st-zr" x="46" y="14" width="32" height="27"/>'
     + '<rect class="st-zc" x="8" y="14" width="38" height="27"/>'
   // Reduced motion: no extras, and the crab stands at its station without walking, wandering or riding; last, so
   // no later rule of the same weight starts a motion again (21 Oct: the walk-in and wander still played).
-  const moving = ['.st-tr', go && '.st-go', roam && '.st-in', lw && '.st-lw', lr && '.st-lr'].filter(Boolean).join()
-  const petStill = '@media (prefers-reduced-motion:reduce){.st-pw,.st-pr{animation:none}'
+  const moving = ['.st-tr', go && '.st-go', roam && '.st-in', ...sideNames].filter(Boolean).join()
+  const petStill = '@media (prefers-reduced-motion:reduce){.st-pop{transform:none!important;transition:none!important}'
     + '.st-zl:hover~.st-look,.st-zr:hover~.st-look,.st-look .st-ey,.st-look .st-wave,.st-look .st-hop,.st-look .st-jmp,.st-look .st-perk,.st-look .st-hs>*,.st-look .st-hb>*{animation:none!important;transform:none!important;transition:none!important}'
     + '.st-look,.st-zc:active~.st-pet,.st-pet{transition:none}}'
   const lightCss = season === 'christmas' ? '.st-lt{animation:st-lt 1.6s steps(1) infinite}@keyframes st-lt{50%{opacity:0}}' : ''
   const still = `@media (prefers-reduced-motion:reduce){${season === 'christmas' ? '.st-lt{animation:none}' : ''}.st-fx{display:none}${moving}{animation:none}.st-tr{transform:none}}`
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${lightCss}${pointerCss}${fxCss}${pwalk?.css ?? ''}${proam?.css ?? ''}${lw?.css ?? ''}${lr?.css ?? ''}${petStill}${still}</style>${fx ? g('st-fx', fx) : ''}${season === 'christmas' ? LIGHTS : ''}`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="41"><style>${css}${lightCss}${pointerCss}${fxCss}${sideCss.join('')}${petStill}${still}</style>${fx ? g('st-fx', fx) : ''}${season === 'christmas' ? LIGHTS : ''}`
     + `<g class="st-at${go ? ' st-go' : ''}"><g class="st-in${roam ? ' st-roam' : ''}"><rect width="${W}" height="41" fill="transparent"/>${rides}${zones}<g class="st-look"><g class="st-perk"><g class="st-jmp"><g class="st-hop"><g class="st-tr">${crab}${joy}</g></g></g></g>${hearts}</g>${label}${bubble}</g></g></svg>`
 }

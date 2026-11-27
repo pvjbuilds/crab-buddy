@@ -228,52 +228,74 @@ test('stage: every mood has a station on it, every roam stays on it, and the sta
   }
 })
 
-// Praj, 12 Oct: the label pops up over the crab wherever it stands, and stays a moment after the pointer leaves.
-test('stage: the label rides above the crab, shows on hover, and the crab keeps walking', () => {
-  const tipOf = (m: Mood) => {
-    const svg = stageArt(m, 0, STATION[m], 'What it means')
-    const g = svg.match(/<g class="st-tip">([^]*?)<\/g>/)?.[1] ?? ''
-    const r = g.match(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/)
-    return { svg, text: g.includes('What it means'), x: Number(r?.[1]), y: Number(r?.[2]), w: Number(r?.[3]), h: Number(r?.[4]) }
-  }
-  const right = tipOf('idle'), left = tipOf('gear')
-  expect(right.text).toBe(true)
-  // Above the head: the body starts at 10/30 x 41 = 13.67 px. Taller than 0.9.1's 12 px, which read squashed
-  // (Praj, 12 Oct).
-  expect([right.y, right.h > 12 && right.h <= 13.5]).toEqual([0, true])
-  // On the right half the label ends at the crab's right edge, on the left half it starts at its left edge,
-  // so it never runs off the stage.
-  expect([right.x + right.w, left.x]).toEqual([52, 0])
+// Praj, 27 Nov: the label sat in a pill over the crab's head, and the pet's jump went up under it ("the text sort
+// of clips the crab top part"). Both captions now stand beside the crab as a speech bubble with a pixel tail:
+// on its left when it stands on the right half, on its right on the left half. These replace the 12 Oct tests that
+// put the label above the head; those tests matched the old design, which Praj replaced.
+// A caption's two sides, as drawn: `l` stands left of the crab, `r` right of it; the side not in use is parked.
+const PARK = -9999
+const sidesOf = (svg: string, cls: 'st-tip' | 'st-pet') => {
+  const from = svg.indexOf(`<g class="${cls}">`), to = cls === 'st-tip' ? svg.indexOf('<g class="st-pet">') : svg.lastIndexOf('</svg>')
+  return svg.slice(from, to).split('<g class="st-s').slice(1).map(chunk => {
+    const rects = [...chunk.matchAll(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].map(m => m.slice(1).map(Number))
+    const text = chunk.match(/<text x="(-?[\d.]+)"[^>]*textLength="([\d.]+)"/)!.slice(1).map(Number)
+    const anims = [...chunk.matchAll(/<g class="(st-[lp]b-[wr][lr])">/g)].map(m => m[1])
+    return { side: chunk[0], parked: chunk.startsWith(`${chunk[0]}" style="transform:translateX(${PARK}px)"`), rects, text, anims,
+      left: Math.min(...rects.map(r => r[0])), right: Math.max(...rects.map(r => r[0] + r[2])),
+      top: Math.min(...rects.map(r => r[1])), bottom: Math.max(...rects.map(r => r[1] + r[3])) }
+  })
+}
+const showing = (svg: string, cls: 'st-tip' | 'st-pet') => sidesOf(svg, cls).filter(s => !s.parked)
+
+test('stage: the label stands beside the crab at eye level, never over its head, and shows on hover', () => {
+  const right = stageArt('idle', 0, STATION.idle, 'What it means'), left = stageArt('gear', 0, STATION.gear, 'What it means')
+  const [r] = showing(right, 'st-tip'), [l] = showing(left, 'st-tip')
+  expect([showing(right, 'st-tip').length, r.side, showing(left, 'st-tip').length, l.side]).toEqual([1, 'l', 1, 'r'])
+  // Clear of the crab's body, which spans x 5.5 to 46 of its 52 px box (tail tips included).
+  expect([r.right <= 5.5, l.left >= 46]).toEqual([true, true])
+  // At eye level (the eyes sit at y 19.2 to 21.9) and inside the 41 px band.
+  for (const s of [r, l]) expect([s.top <= 19.2, s.bottom >= 21.9, s.top >= 0, s.bottom <= 41]).toEqual([true, true, true, true])
+  expect(right.includes('What it means')).toBe(true)
   // Praj, 12 Oct (second pass): the crab never stops for the pointer; the label rides with it and stays 3 s
-  // after the pointer leaves, then hides.
-  expect(right.svg).not.toContain('paused')
-  // ...and fades out over .2 s, like the rest of the animation.
-  expect(right.svg).toContain('.st-tip{opacity:0;visibility:hidden;transition:opacity .2s 3s,visibility 0s 3.2s}')
-  expect(right.svg).toContain('.st-at:hover .st-tip{opacity:1;visibility:visible;transition:none}')
-  // Glyphs keep their own shape: only the spacing flexes to fit the pill (squashed glyphs read low-res, 12:32).
-  expect(right.svg).toContain('lengthAdjust="spacing"')
-  expect(right.svg).not.toContain('spacingAndGlyphs')
-  expect(right.svg).toContain('font-size="11.5"')
-  // Not crab orange: dark ink on a light pill, light ink on a dark pill in the dark theme.
-  expect(right.svg).not.toContain('#D97757"/><text')
-  expect(right.svg).toMatch(/@media \(prefers-color-scheme:dark\)\{\.st-bg\{fill:#[0-9a-f]{6}\}\.st-ink\{fill:#[0-9a-f]{6}\}\}/)
+  // after the pointer leaves, then fades out over .2 s.
+  expect(right).not.toContain('paused')
+  expect(right).toContain('.st-tip{opacity:0;visibility:hidden;transition:opacity .2s 3s,visibility 0s 3.2s}')
+  expect(right).toContain('.st-at:hover .st-tip{opacity:1;visibility:visible;transition:none}')
+  // Glyphs keep their own shape: only the spacing flexes to fit (squashed glyphs read low-res, 12:32).
+  expect(right).toContain('lengthAdjust="spacing"')
+  expect(right).not.toContain('spacingAndGlyphs')
+  expect(right).toContain('font-size="11.5"')
+  // Not crab orange: dark ink on a light bubble, light ink on a dark one in the dark theme, with a grey border.
+  expect(right).not.toContain('#D97757"/><text')
+  expect(right).toMatch(/@media \(prefers-color-scheme:dark\)\{\.st-bg\{fill:#[0-9a-f]{6}\}\.st-ink\{fill:#[0-9a-f]{6}\}\.st-bd\{fill:#[0-9a-f]{6}\}\}/)
   expect(stageArt('idle', 0, 1, 'a & b').includes('a &amp; b')).toBe(true)
 })
 
-// Recording 12:24 (Praj): "A command faile" ran off the stage's right edge. The label picked its side from the
-// mood's resting spot, while the crab was still walking in or wandering on the other half.
+// Recording 12:24 (Praj): "A command faile" ran off the stage's right edge. The caption must follow the crab's half
+// through the walk and the wander, with exactly one side showing at every moment.
 test('stage: the label switches sides with the crab, through the walk and the wander', () => {
   const tip = 'A command failed'
-  const sides = (svg: string, name: string) =>
-    new Set([...(svg.match(new RegExp(`@keyframes ${name}\\{([^]*?)\\}\\}`))?.[1] ?? '').matchAll(/translateX\((-?[\d.]+)px\)/g)].map(m => Number(m[1])))
-  // Walking from the far right to gear (.1): right-anchored first, left-anchored on arrival.
-  const walk = stageArt('gear', 0, 1, tip)
-  const w = Number(walk.match(/<g class="st-tip">[^]*?width="([\d.]+)"/)?.[1])
-  expect([...sides(walk, 'st-lw')].sort((a, b) => a - b)).toEqual([52 - w, 0])
+  // Each side's offset at u% of a clock: its parking plus the step-end keyframes of that clock's animation.
+  const offsets = (svg: string, anim: string | undefined) => {
+    const k = anim ? [...(svg.match(new RegExp(`@keyframes ${anim}\\{([^]*?)\\}\\}`))?.[1] ?? '').matchAll(/(\d+)%\{transform:translateX\((-?\d+)px\)/g)].map(m => [Number(m[1]), Number(m[2])]) : []
+    return (u: number) => k.filter(([p]) => p <= u).at(-1)?.[1] ?? 0
+  }
+  const seen = (svg: string, clock: 'w' | 'r') => {
+    const ss = sidesOf(svg, 'st-tip'), out = new Set<string>()
+    for (let u = 0; u <= 100; u++) {
+      const up = ss.filter(s => (s.parked ? PARK : 0) + offsets(svg, s.anims.find(a => a.endsWith(clock + s.side)))(u) === 0)
+      expect(up.length).toBe(1)
+      out.add(up[0].side)
+    }
+    return [...out].sort()
+  }
+  // Walking from the far right to gear (.1): left of the crab first, right of it on arrival.
+  expect(seen(stageArt('gear', 0, 1, tip), 'w')).toEqual(['l', 'r'])
   // idle rests at the far right and wanders to .25: the wander crosses the middle both ways.
-  expect(sides(stageArt('idle', 0, 1, tip), 'st-lr').size).toBe(2)
-  // A crab that stays on one half never moves its label.
-  expect(stageArt('ask', 0, 1, tip)).not.toContain('st-lw')
+  expect(seen(stageArt('idle', 0, 1, tip), 'r')).toEqual(['l', 'r'])
+  // A crab that stays on one half draws one side only, and never moves it.
+  expect(sidesOf(stageArt('ask', 0, 1, tip), 'st-tip').map(s => s.side)).toEqual(['l'])
+  expect(stageArt('ask', 0, 1, tip)).not.toMatch(/st-lb-[wr][lr]/)
 })
 
 import { where } from './hooks/art.ts'
@@ -354,7 +376,8 @@ test('stage: build lays a wall, paint leaves a stripe, sub sends minis, web surf
   for (const m of MOODS) for (const t of [0, 2]) for (const from of [0, STATION[m]]) {
     const svg = stageArt(m, t, from, 'What it means')
     const still = svg.match(/@media \(prefers-reduced-motion:reduce\)\{\.st-fx\{display:none\}([^{]*)\{animation:none\}\.st-tr\{transform:none\}\}<\/style>/)?.[1]
-    const moving = ['st-tr', 'st-go', 'st-in', 'st-lw', 'st-lr'].filter(c => svg.includes(`.${c}{animation:`))
+    // The captions' side switches move too (st-lb-* the label, st-pb-* the pet line).
+    const moving = [...new Set([...svg.matchAll(/\.(st-(?:tr|go|in|[lp]b-[wr][lr]))\{animation:/g)].map(m => m[1]))]
     expect([m, t, still?.split(',').sort()]).toEqual([m, t, ['.st-tr', ...moving.filter(c => c !== 'st-tr').map(c => `.${c}`)].sort()])
   }
   for (const m of ['idle', 'ask'] as Mood[]) expect(stageArt(m, 0, 1)).not.toMatch(/st-bk|st-sp|st-mc|st-sea|st-pg|st-globe|st-cf/)
@@ -633,7 +656,7 @@ test('stage: pointer rules fire on the right pointer state, in the right directi
   // The zones must catch the pointer although they are transparent.
   expect(svg).toContain('.st-zl,.st-zr,.st-zc{fill:transparent;pointer-events:all}')
   // Reduced motion stills the wave and the hop too.
-  const still = svg.slice(svg.indexOf('@media (prefers-reduced-motion:reduce){.st-pw'))
+  const still = svg.slice(svg.indexOf('@media (prefers-reduced-motion:reduce){.st-pop{transform:none!important;transition:none!important}'))
   expect(still).toContain('.st-look .st-wave')
   expect(still).toContain('.st-look .st-hop')
 })
@@ -718,7 +741,7 @@ test('pet: the pointer arriving on the crab makes it perk up once and look up; r
   // Held, it purrs; only a press starts the purr, never a hover.
   expect(svg).toMatch(/\.st-zc:active~\.st-look \.st-perk\{animation:st-purr /)
   expect(svg).not.toMatch(/:hover~\.st-look \.st-perk\{animation:st-purr/)
-  const still = svg.slice(svg.indexOf('@media (prefers-reduced-motion:reduce){.st-pw'))
+  const still = svg.slice(svg.indexOf('@media (prefers-reduced-motion:reduce){.st-pop{transform:none!important;transition:none!important}'))
   for (const cls of ['.st-look .st-jmp', '.st-look .st-perk', '.st-look .st-hs>*', '.st-look .st-hb>*']) expect(still).toContain(cls)
 })
 
@@ -762,19 +785,60 @@ test('the weekend chair seat is not near-white and the wire of the christmas lig
   expect(stage('idle', 0, STATION.idle, MEANING.idle, undefined, 'christmas', 2026)).toContain('<rect width="100%" height="9" fill="url(#st-lw)"/>')
 })
 
-// One caption at a time (Praj, 17 Nov, live: the hover label and the pet bubble showed together). The pet line takes
-// the label's own lane and covers it: same top lane, drawn after the label, at least as wide, on the same side.
-// This replaces the 03:00 test that put the bubble beside the crab; that test was the stale side.
-test('the pet line covers the hover label, so only one caption shows', () => {
+// One caption at a time (Praj, 17 Nov, live: the hover label and the pet bubble showed together). Since 27 Nov the
+// label steps aside while the pet line shows, and each bubble is sized to its own text: covering the label made the
+// pet bubble as wide as the label, with a wide empty gap after a short pet line ("uneven padding that really is not a
+// good UX", Praj, 27 Nov). This replaces the 17 Nov test that required the pet bubble to cover the label; that
+// design is the side that changed, not the code.
+test('one caption at a time: the label steps aside for the pet line, which sits on the same side', () => {
   for (const m of Object.keys(STATION) as Mood[]) {
     const svg = stage(m, 0, STATION[m], MEANING[m])
-    const box = (cls: string) => svg.match(new RegExp(`<g class="${cls}">[^]*?<rect x="(-?[\\d.]+)" y="([\\d.]+)" width="([\\d.]+)" height="([\\d.]+)"`))!.slice(1).map(Number)
-    const [lx, ly, lw, lh] = box('st-tip'), [px, py, pw, ph] = box('st-pet')
-    expect([py, ph]).toEqual([ly, lh])
-    expect(px).toBeLessThanOrEqual(lx)
-    expect(px + pw).toBeGreaterThanOrEqual(lx + lw)
-    expect(py + ph).toBeLessThanOrEqual(13.67)  // the art's clear top: never over the crab
-    expect(svg.indexOf('class="st-pet"')).toBeGreaterThan(svg.indexOf('class="st-tip"'))
+    expect([m, showing(svg, 'st-pet').map(s => s.side)]).toEqual([m, showing(svg, 'st-tip').map(s => s.side)])
+    expect(svg).toContain('<g class="st-tip"><g class="st-tq">')
+    expect(svg.indexOf('<g class="st-pet">')).toBeGreaterThan(svg.indexOf('<g class="st-tip">'))
+  }
+  const svg = stage('idle', 0, 1, MEANING.idle)
+  // Hidden at once on a press, back only once the pet line has faded (it lingers 2.2 s, then fades in .15 s).
+  expect(svg).toContain('.st-zc:active~.st-tip .st-tq{opacity:0;transition:none}')
+  expect(svg).toContain('.st-tq{transition:opacity .15s 2.35s}')
+  expect(svg).toContain('.st-pet{opacity:0;transition:opacity .15s 2.2s}')
+  expect(svg).toContain('.st-zc:active~.st-pet{opacity:1;transition:none}')
+})
+
+// The bubble's body, without its four-pixel tail (on the crab's side), and the text's padding on each side.
+const pads = (s: ReturnType<typeof sidesOf>[number]) => {
+  const [l, r] = s.side === 'l' ? [s.left, s.right - 4] : [s.left + 4, s.right]
+  return [+(s.text[0] - l).toFixed(2), +(r - s.text[0] - s.text[1]).toFixed(2)]
+}
+test('captions: six pixels of padding on both sides of every label and pet line', () => {
+  const seen = new Set<string>()
+  for (const m of Object.keys(STATION) as Mood[]) for (const t of [0, 2]) for (const from of [0, 1]) {
+    const svg = stage(m, t, from, MEANING[m])
+    for (const cls of ['st-tip', 'st-pet'] as const) for (const s of sidesOf(svg, cls)) expect([m, cls, pads(s)]).toEqual([m, cls, [6, 6]])
+    seen.add(svg.match(/<g class="st-pet">[^]*?lengthAdjust="spacing">([^<]*)</)![1])
+  }
+  // A short pet line gets a short bubble, not the label's width.
+  const [tip] = showing(stage('idle', 0, 1, MEANING.idle), 'st-tip')
+  const short = PET_LINES.find(l => l.length < 20)!
+  expect(seen.size).toBeGreaterThan(5)
+  expect(short).toBeTruthy()
+  for (let from = 0; from <= 1; from += .01) {
+    const svg = stage('idle', 0, +from.toFixed(2), MEANING.idle)
+    if (!svg.includes(`>${short}</text>`)) continue
+    const [pet] = showing(svg, 'st-pet')
+    expect(pet.right - pet.left).toBeLessThan(tip.right - tip.left)
+    break
+  }
+})
+
+// Widths measured in Chromium at 11.5 px sans-serif (Helvetica on macOS; Arial on Windows has the same metrics),
+// 27 Nov. The old guess was up to 3.5 px off, which showed as a gap at one end of the line.
+test('captions: the text width matches the font as measured, within 1.5 px', () => {
+  const measured: [string, number][] = [['Idle: waiting for your message', 152.77], ['Thinking', 43.47], ['Running tests', 70.32],
+    ['A command failed: fixing it', 134.23], ['Another model is working: Codex, Gemini', 211.57], ['Committing and pushing with git', 163]]
+  for (const [text, px] of measured) {
+    const [s] = showing(stage('idle', 0, 1, text), 'st-tip')
+    expect([text, Math.abs(s.text[1] - px) <= 1.5]).toEqual([text, true])
   }
 })
 
